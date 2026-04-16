@@ -1,0 +1,94 @@
+"""
+DocMind AI — FastAPI Application
+Main app assembly with middleware, routers, and startup checks.
+"""
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+
+from config import ALLOWED_ORIGINS, ENVIRONMENT
+from routes.auth_routes import router as auth_router
+from routes.document_routes import router as document_router
+from routes.query_routes import router as query_router
+
+# ─── Logging ───
+logging.basicConfig(
+    level=logging.INFO if ENVIRONMENT == "production" else logging.DEBUG,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+# ─── Lifespan (startup / shutdown) ───
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Verify external connections on startup."""
+    logger.info("DocMind AI starting up...")
+
+    # Verify Supabase connection
+    try:
+        from database import supabase
+        supabase.table("documents").select("id").limit(1).execute()
+        logger.info("✅ Supabase connection verified.")
+    except Exception as e:
+        logger.warning(f"⚠️ Supabase connection check failed: {e}")
+
+    # Verify Groq API key is set
+    from config import GROQ_API_KEY
+    if GROQ_API_KEY:
+        logger.info("✅ Groq API key is configured.")
+    else:
+        logger.warning("⚠️ Groq API key is not set.")
+
+    # Verify embedding model is loaded
+    try:
+        from database import embedder
+        test_embed = embedder.encode(["test"])
+        logger.info(f"✅ Embedding model loaded (dim={len(test_embed[0])}).")
+    except Exception as e:
+        logger.warning(f"⚠️ Embedding model check failed: {e}")
+
+    yield
+
+    logger.info("DocMind AI shutting down.")
+
+
+# ─── App ───
+
+app = FastAPI(
+    title="DocMind AI API",
+    version="1.0.0",
+    description="Production RAG Document Intelligence API",
+    lifespan=lifespan,
+)
+
+# ─── Middleware ───
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # More permissive for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# ─── Routers ───
+
+app.include_router(auth_router, prefix="/api/auth")
+app.include_router(document_router, prefix="/api/documents")
+app.include_router(query_router, prefix="/api")
+
+
+# ─── Health Check ───
+
+@app.get("/health", tags=["System"])
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok", "version": "1.0.0", "service": "DocMind AI"}

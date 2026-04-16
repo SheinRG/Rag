@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+supabase
+groq
+sentence-transformers
+langchain-text-splitters
+pypdf
+python-multipart
+python-dotenv
+pydantic[email]
+httpx
+numpy
