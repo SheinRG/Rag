@@ -5,6 +5,7 @@ const useDocumentStore = create((set, get) => ({
   documents: [],
   loading: false,
   uploading: false,
+  uploadProgress: 0,
   error: null,
 
   fetchDocuments: async () => {
@@ -18,20 +19,26 @@ const useDocumentStore = create((set, get) => ({
   },
 
   uploadDocument: async (file) => {
-    set({ uploading: true, error: null });
+    set({ uploading: true, error: null, uploadProgress: 0 });
     try {
       const formData = new FormData();
       formData.append('file', file);
       const { data } = await api.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            set({ uploadProgress: percentCompleted });
+          }
+        }
       });
       // Refresh document list
       get().fetchDocuments();
-      set({ uploading: false });
+      set({ uploading: false, uploadProgress: 0 });
       return data;
     } catch (err) {
       const msg = err.response?.data?.detail || err.message;
-      set({ uploading: false, error: msg });
+      set({ uploading: false, uploadProgress: 0, error: msg });
       throw new Error(msg);
     }
   },

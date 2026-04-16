@@ -36,6 +36,8 @@ export default api;
  */
 export async function streamPost(path, body) {
   const token = localStorage.getItem('access_token');
+  console.log('Stream post:', path, body);
+  
   const response = await fetch(`${API_URL}/api${path}`, {
     method: 'POST',
     headers: {
@@ -45,8 +47,11 @@ export async function streamPost(path, body) {
     body: JSON.stringify(body),
   });
 
+  console.log('Response status:', response.status, response.statusText);
+  
   if (!response.ok) {
-    throw new Error(`Stream request failed: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`Stream request failed: ${response.status} - ${errorText}`);
   }
 
   return response.body;

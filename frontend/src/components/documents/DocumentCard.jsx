@@ -1,3 +1,6 @@
+import { useEffect } from 'react';
+import useDocumentStore from '../../store/documentStore';
+
 const statusColors = {
   processing: { bg: 'var(--color-warning-light)', color: 'var(--color-warning)', label: 'Processing...' },
   ready: { bg: 'var(--color-success-light)', color: 'var(--color-success)', label: 'Ready' },
@@ -14,6 +17,19 @@ function formatSize(bytes) {
 
 export default function DocumentCard({ doc, onDelete }) {
   const st = statusColors[doc.status] || statusColors.processing;
+  const pollStatus = useDocumentStore((state) => state.pollDocumentStatus);
+
+  useEffect(() => {
+    let intervalId;
+    if (doc.status === 'processing') {
+      intervalId = setInterval(() => {
+        pollStatus(doc.id);
+      }, 3000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [doc.status, doc.id, pollStatus]);
 
   return (
     <div style={{

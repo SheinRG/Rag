@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import useDocumentStore from '../../store/documentStore';
 
 export default function UploadZone() {
-  const { uploadDocument, uploading } = useDocumentStore();
+  const { uploadDocument, uploading, uploadProgress } = useDocumentStore();
   const [error, setError] = useState('');
 
   const onDrop = useCallback(async (accepted, rejected) => {
@@ -43,7 +43,21 @@ export default function UploadZone() {
         <input {...getInputProps()} />
         <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📤</p>
         {uploading ? (
-          <p style={{ fontWeight: 600, color: 'var(--color-primary-600)' }}>Uploading...</p>
+          <div style={{ marginTop: '0.5rem' }}>
+            <p style={{ fontWeight: 600, color: 'var(--color-primary-600)', marginBottom: '0.5rem' }}>
+              Uploading... {uploadProgress}%
+            </p>
+            <div style={{ 
+              width: '100%', height: '8px', background: 'var(--color-border)', 
+              borderRadius: '4px', overflow: 'hidden' 
+            }}>
+              <div style={{ 
+                height: '100%', background: 'var(--color-primary-500)', 
+                width: `${uploadProgress}%`,
+                transition: 'width 0.2s ease-in-out'
+              }} />
+            </div>
+          </div>
         ) : isDragActive ? (
           <p style={{ fontWeight: 600, color: 'var(--color-primary-600)' }}>Drop files here</p>
         ) : (

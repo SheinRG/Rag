@@ -17,15 +17,19 @@ logger = logging.getLogger(__name__)
 client = Groq(api_key=GROQ_API_KEY)
 
 
-def build_prompt(question: str, chunks: List[dict]) -> str:
+def build_system_prompt(chunks: List[dict]) -> str:
     """
-    Builds the RAG prompt with context chunks and the user's question.
+    Builds the system prompt with context chunks.
     """
     context_parts = []
     for chunk in chunks:
-        context_parts.append(f'[SOURCE: {chunk["source"]}]\n{chunk["content"]}')
+        context_parts.append(f"[SOURCE: {chunk['source']}]\n{chunk['content']}")
 
-    context = "\n\n".join(context_parts) if context_parts else "No document context available."
+    context = (
+        "\n\n".join(context_parts)
+        if context_parts
+        else "No document context available."
+    )
 
     prompt = f"""You are DocMind AI, a highly intelligent and collaborative research assistant (similar to NotebookLM). Your goal is to help the user understand, synthesize, and explore their uploaded documents.
 
@@ -38,30 +42,33 @@ Guidelines for your response:
 
 --- CONTEXT START ---
 {context}
---- CONTEXT END ---
-
-QUESTION: {question}
-ANSWER:"""
+--- CONTEXT END ---"""
 
     return prompt
 
 
-async def ask_stream(question: str, user_id: str) -> AsyncGenerator[str, None]:
+async def ask_stream(
+    question: str, user_id: str, document_id: str = None
+) -> AsyncGenerator[str, None]:
     """
     Main streaming Q&A function.
     Retrieves context, queries Groq, and yields SSE events.
+    Optionally filters by document_id for per-document chats.
     """
     try:
         # Step 1: Retrieve relevant chunks
-        chunks = retrieve(question, user_id)
+        chunks = retrieve(question, user_id, document_id=document_id)
 
         # Step 3: Build prompt
-        prompt = build_prompt(question, chunks)
+        system_prompt = build_system_prompt(chunks)
 
         # Step 4: Stream from Groq
         stream = client.chat.completions.create(
             model=GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question},
+            ],
             stream=True,
             max_tokens=1024,
             temperature=0.2,
@@ -70,16 +77,23 @@ async def ask_stream(question: str, user_id: str) -> AsyncGenerator[str, None]:
         for groq_chunk in stream:
             delta = groq_chunk.choices[0].delta
             if delta and delta.content:
-                yield f'data: {json.dumps({"type": "token", "content": delta.content})}\n\n'
+                yield f"data: {json.dumps({'type': 'token', 'content': delta.content})}\n\n"
 
-        # Step 5: Send source information
-        unique_sources = list({chunk["source"] for chunk in chunks})
-        yield f'data: {json.dumps({"type": "sources", "content": unique_sources})}\n\n'
+        # Step 5: Send source information with chunks
+        sources_map = {}
+        for chunk in chunks:
+            src = chunk["source"]
+            if src not in sources_map:
+                sources_map[src] = []
+            sources_map[src].append(chunk["content"])
+
+        formatted_sources = [{"name": k, "chunks": v} for k, v in sources_map.items()]
+        yield f"data: {json.dumps({'type': 'sources', 'content': formatted_sources})}\n\n"
 
         # Step 6: Send done signal
-        yield f'data: {json.dumps({"type": "done"})}\n\n'
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     except Exception as e:
         logger.error(f"Streaming failed: {e}")
-        yield f'data: {json.dumps({"type": "error", "content": "An error occurred while generating the answer. Please try again."})}\n\n'
-        yield f'data: {json.dumps({"type": "done"})}\n\n'
+        yield f"data: {json.dumps({'type': 'error', 'content': 'An error occurred while generating the answer. Please try again.'})}\n\n"
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"

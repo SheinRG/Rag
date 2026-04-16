@@ -5,7 +5,7 @@ export default function MessageList({ messages }) {
   const endRef = useRef(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    endRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages]);
 
   if (messages.length === 0) {
