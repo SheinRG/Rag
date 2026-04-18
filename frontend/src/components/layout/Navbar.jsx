@@ -1,9 +1,22 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 
 export default function Navbar() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState('product');
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    // Call once to set initial state
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -11,48 +24,61 @@ export default function Navbar() {
   };
 
   return (
-    <nav id="navbar" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-      background: 'rgba(255,255,255,0.75)',
-      borderBottom: '1px solid var(--color-border)',
-    }}>
-      <div style={{
-        maxWidth: '1280px', margin: '0 auto',
-        padding: '0.75rem 1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <Link to={user ? '/dashboard' : '/'} style={{
-          display: 'flex', alignItems: 'center', gap: '0.5rem',
-          textDecoration: 'none', color: 'inherit',
-        }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontSize: '18px',
-          }}>⚙</div>
-          <span style={{ fontWeight: 700, fontSize: '1.15rem', color: 'var(--color-primary-700)' }}>DocMind AI</span>
+    <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 font-sans" style={{ fontFamily: '"Inter", "system-ui", sans-serif' }}>
+      <div 
+        className={`rounded-[999px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center justify-between w-full max-w-[1000px] px-8 py-3 transition-all duration-300 ease-in-out ${
+          isScrolled ? 'bg-white/70 backdrop-blur-lg' : 'bg-white'
+        }`}
+      >
+        {/* Logo */}
+        <Link to={user ? '/dashboard' : '/'} className="text-[#111827] no-underline focus:outline-none">
+           <span className="font-extrabold text-[1.3rem] tracking-tighter text-black">DocMind AI</span>
         </Link>
+        
+        {/* Center Links */}
+        <div className="hidden md:flex items-center gap-8 -ml-8">
+           <div className="flex flex-col items-center">
+             <a 
+               href="#product" 
+               onClick={() => setActiveSection('product')}
+               className={`font-semibold text-[0.95rem] transition-colors pb-1 border-b-2 hover:opacity-75 ${
+                 activeSection === 'product' ? 'text-black border-black' : 'text-gray-400 border-transparent hover:text-black'
+               }`}
+             >
+               Product
+             </a>
+           </div>
+           <div className="flex flex-col items-center">
+             <a 
+               href="#features" 
+               onClick={() => setActiveSection('features')}
+               className={`font-semibold text-[0.95rem] transition-colors pb-1 border-b-2 hover:opacity-75 ${
+                 activeSection === 'features' ? 'text-black border-black' : 'text-gray-400 border-transparent hover:text-black'
+               }`}
+             >
+               Features
+             </a>
+           </div>
+        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* Right CTA */}
+        <div className="flex items-center gap-6">
           {user ? (
             <>
-              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>{user.email}</span>
-              <button onClick={handleLogout} style={{
-                padding: '0.5rem 1rem', borderRadius: '8px',
-                border: '1px solid var(--color-border)', background: 'white',
-                cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500,
-              }}>Log out</button>
+              <span className="hidden sm:inline-block text-sm text-gray-500 font-semibold">{user.email}</span>
+              <button
+                onClick={handleLogout}
+                className="px-6 py-2.5 rounded-full bg-black text-white font-semibold text-[0.9rem] hover:bg-gray-800 transition-colors"
+              >
+                Log out
+              </button>
             </>
           ) : (
             <>
-              <Link to="/login" style={{ textDecoration: 'none', color: 'var(--color-text)', fontWeight: 500, fontSize: '0.9rem' }}>Log in</Link>
-              <Link to="/signup" style={{
-                textDecoration: 'none', padding: '0.5rem 1.25rem',
-                background: 'var(--color-primary-600)', color: 'white',
-                borderRadius: '8px', fontWeight: 600, fontSize: '0.9rem',
-              }}>Get Started</Link>
+              <Link to="/login" className="hidden sm:inline-block text-black font-bold text-[0.95rem] no-underline hover:text-gray-600 transition-colors">Log In</Link>
+              <Link to="/signup" className="px-6 py-[0.65rem] bg-black text-white rounded-[999px] font-bold text-[0.9rem] no-underline hover:bg-gray-800 transition-all shadow-md">
+                Get Started
+              </Link>
             </>
           )}
         </div>

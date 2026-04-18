@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 
 export default function ChatInput({ onSend, disabled }) {
   const [question, setQuestion] = useState('');
@@ -11,28 +12,24 @@ export default function ChatInput({ onSend, disabled }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{
-      padding: '1rem 1.5rem', borderTop: '1px solid var(--color-border)',
-      background: 'white', display: 'flex', gap: '0.75rem',
-    }}>
+    <form onSubmit={handleSubmit} className="p-4 md:p-6 border-t border-gray-200/60 bg-white/40 backdrop-blur-sm flex gap-3">
       <input
         type="text"
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
         placeholder="Ask a question about your documents..."
         disabled={disabled}
-        style={{
-          flex: 1, padding: '0.75rem 1rem', borderRadius: '10px',
-          border: '1px solid var(--color-border)', fontSize: '0.95rem',
-          outline: 'none', fontFamily: 'inherit',
-        }}
+        className="flex-1 px-4 py-3 rounded-[14px] border border-gray-200/80 text-[0.95rem] outline-none bg-white/70 backdrop-blur-md shadow-sm focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#e0f2fe] transition-all text-gray-800 placeholder-gray-400"
       />
-      <button type="submit" disabled={disabled || !question.trim()} style={{
-        padding: '0.75rem 1.5rem', borderRadius: '10px', border: 'none',
-        background: 'var(--color-primary-600)', color: 'white',
-        fontWeight: 600, cursor: 'pointer', opacity: disabled || !question.trim() ? 0.5 : 1,
-        fontFamily: 'inherit',
-      }}>Send</button>
+      <motion.button
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.97 }}
+        type="submit"
+        disabled={disabled || !question.trim()}
+        className={`px-6 py-3 rounded-[14px] font-bold text-white shadow-md bg-[#0ea5e9] hover:bg-[#0284c7] transition-all ${disabled || !question.trim() ? 'opacity-50 blur-[0.5px] shadow-none' : ''}`}
+      >
+        Send
+      </motion.button>
     </form>
   );
 }

@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 
-export default function MessageList({ messages }) {
+export default function MessageList({ messages, onReask }) {
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function MessageList({ messages }) {
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem' }}>
       {messages.map((msg, i) => (
-        <MessageBubble key={i} message={msg} />
+        <MessageBubble key={i} message={msg} onReask={msg.role === 'user' ? onReask : undefined} />
       ))}
       <div ref={endRef} />
     </div>

@@ -24,74 +24,59 @@ export default function SignupPage() {
     }
   };
 
-  const cardStyle = {
-    background: 'white', borderRadius: '20px', padding: '2.5rem',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.08)', width: '100%', maxWidth: '420px',
-  };
-
-  const inputStyle = {
-    width: '100%', padding: '0.75rem 1rem', borderRadius: '10px',
-    border: '1px solid var(--color-border)', fontSize: '1rem',
-    outline: 'none', fontFamily: 'inherit',
-  };
-
-  const btnStyle = {
-    width: '100%', padding: '0.85rem', borderRadius: '10px', border: 'none',
-    background: 'var(--color-primary-600)', color: 'white',
-    fontWeight: 600, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit',
-  };
-
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.05) 100%)',
-      padding: '1rem',
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: '12px',
-            background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px',
-          }}>⚙</div>
-          <span style={{ fontWeight: 700, fontSize: '1.25rem', color: 'var(--color-primary-700)' }}>DocMind AI</span>
+    <div className="min-h-screen flex items-center justify-center relative font-sans overflow-hidden" style={{ background: '#FAFAFA', fontFamily: '"Inter", "system-ui", sans-serif' }}>
+      
+      {/* Background Mesh Orbs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full bg-[#0ea5e9]/10 blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] rounded-full bg-purple-500/10 blur-[120px] pointer-events-none z-0"></div>
+      
+      <div className="text-center relative z-10 w-full max-w-[440px] px-4">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2.5 mb-8">
+           <Link to="/" className="text-[#111827] no-underline focus:outline-none flex items-center gap-2">
+             <span className="font-extrabold text-[1.6rem] tracking-tighter text-black">DocMind AI</span>
+           </Link>
         </div>
 
-        <div style={cardStyle}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>Create your account</h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Free forever. No credit card needed.</p>
+        {/* Card */}
+        <div className="bg-white/60 backdrop-blur-xl rounded-[32px] p-8 sm:p-10 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-left">
+          <h1 className="text-[1.6rem] font-bold mb-2 text-black" style={{ fontFamily: '"Rubik", sans-serif', letterSpacing: '-0.02em' }}>Create your account</h1>
+          <p className="text-gray-500 mb-8 text-[0.95rem]">Free forever. No credit card needed.</p>
 
           {(error || message) && (
-            <div style={{
-              background: error ? 'var(--color-error-light)' : 'var(--color-success-light)',
-              color: error ? 'var(--color-error)' : 'var(--color-success)',
-              padding: '0.75rem 1rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.9rem',
-            }}>{error || message}</div>
+            <div className={`px-4 py-3 rounded-[12px] mb-6 text-[0.9rem] font-medium border ${error ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
+              {error || message}
+            </div>
           )}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.4rem' }}>Email address</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com" required style={inputStyle} />
+            <div className="mb-5">
+               <label className="block font-semibold text-[0.875rem] mb-1.5 text-gray-700">Email address</label>
+               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                 className="w-full px-4 py-3.5 rounded-[16px] border border-gray-200 text-[0.95rem] outline-none hover:border-gray-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#e0f2fe] transition-all bg-white/50 backdrop-blur-sm"
+                 placeholder="you@example.com" required />
             </div>
-            <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.4rem' }}>Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 characters" required minLength={6} style={inputStyle} />
+            <div className="mb-5">
+               <label className="block font-semibold text-[0.875rem] mb-1.5 text-gray-700">Password</label>
+               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                 className="w-full px-4 py-3.5 rounded-[16px] border border-gray-200 text-[0.95rem] outline-none hover:border-gray-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#e0f2fe] transition-all bg-white/50 backdrop-blur-sm"
+                 placeholder="Min. 6 characters" required minLength={6} />
             </div>
-            <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.4rem' }}>Confirm Password</label>
-              <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
-                placeholder="••••••••" required style={inputStyle} />
+            <div className="mb-8">
+               <label className="block font-semibold text-[0.875rem] mb-1.5 text-gray-700">Confirm Password</label>
+               <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+                 className="w-full px-4 py-3.5 rounded-[16px] border border-gray-200 text-[0.95rem] outline-none hover:border-gray-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#e0f2fe] transition-all bg-white/50 backdrop-blur-sm"
+                 placeholder="••••••••" required />
             </div>
-            <button type="submit" disabled={loading} style={{ ...btnStyle, opacity: loading ? 0.7 : 1 }}>
+            <button type="submit" disabled={loading} 
+              className={`w-full py-4 rounded-[16px] font-bold text-[1rem] text-white bg-black hover:bg-gray-800 transition-colors shadow-lg shadow-black/10 ${loading ? 'opacity-70' : ''}`}>
               {loading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
 
-          <p style={{ marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-            Already have an account? <Link to="/login" style={{ color: 'var(--color-primary-600)', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
+          <p className="mt-8 text-center text-[0.95rem] text-gray-500 font-medium">
+             Already have an account? <Link to="/login" className="text-[#0ea5e9] font-bold no-underline hover:text-blue-500 transition-colors">Sign in</Link>
           </p>
         </div>
       </div>

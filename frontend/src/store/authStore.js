@@ -62,5 +62,7 @@ const useAuthStore = create((set) => ({
 
   clearError: () => set({ error: null }),
 }));
+// Sync load immediately on script execution to prevent router flicker
+useAuthStore.getState().loadFromStorage();
 
 export default useAuthStore;

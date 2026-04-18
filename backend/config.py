@@ -16,6 +16,9 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = "llama-3.1-8b-instant"
 
+# ─── Tavily ───
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+
 # ─── Embeddings ───
 EMBED_MODEL = "all-MiniLM-L6-v2"
 EMBED_DIMENSIONS = 384

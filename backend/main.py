@@ -14,6 +14,8 @@ from config import ALLOWED_ORIGINS, ENVIRONMENT
 from routes.auth_routes import router as auth_router
 from routes.document_routes import router as document_router
 from routes.query_routes import router as query_router
+from routes.studio_routes import router as studio_router
+from routes.search_routes import router as search_router
 
 # ─── Logging ───
 logging.basicConfig(
@@ -84,6 +86,8 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(document_router, prefix="/api/documents")
 app.include_router(query_router, prefix="/api")
+app.include_router(studio_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
 
 
 # ─── Health Check ───
