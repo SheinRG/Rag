@@ -8,21 +8,25 @@ const useDocumentStore = create((set, get) => ({
   uploadProgress: 0,
   error: null,
 
-  fetchDocuments: async () => {
+  fetchDocuments: async (notebookId) => {
     set({ loading: true });
     try {
-      const { data } = await api.get('/documents');
+      const params = notebookId ? { notebook_id: notebookId } : {};
+      const { data } = await api.get('/documents', { params });
       set({ documents: data, loading: false });
     } catch (err) {
       set({ loading: false, error: err.message });
     }
   },
 
-  uploadDocument: async (file) => {
+  uploadDocument: async (file, notebookId) => {
     set({ uploading: true, error: null, uploadProgress: 0 });
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (notebookId) {
+        formData.append('notebook_id', notebookId);
+      }
       const { data } = await api.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
@@ -32,8 +36,26 @@ const useDocumentStore = create((set, get) => ({
           }
         }
       });
-      // Refresh document list
-      get().fetchDocuments();
+
+      // Auto-rename notebook if it's the first upload and still "Untitled notebook"
+      if (notebookId) {
+        try {
+          const { default: useNotebookStore } = await import('./notebookStore');
+          const nb = useNotebookStore.getState().activeNotebook;
+          const currentDocs = get().documents;
+          // Only rename if it's the first doc and notebook is still untitled
+          if (currentDocs.length === 0 && nb && nb.title === 'Untitled notebook') {
+            const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+            await useNotebookStore.getState().updateNotebook(notebookId, { title: fileName });
+            useNotebookStore.getState().setActiveNotebook({ ...nb, title: fileName });
+          }
+        } catch (err) {
+          console.warn('Auto-rename failed:', err);
+        }
+      }
+
+      // Refresh document list (scoped to notebook)
+      get().fetchDocuments(notebookId);
       set({ uploading: false, uploadProgress: 0 });
       return data;
     } catch (err) {

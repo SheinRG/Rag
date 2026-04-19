@@ -3,10 +3,88 @@ import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import Navbar from '../components/layout/Navbar';
 import SpotlightCard from '../components/ui/SpotlightCard';
+import { BackgroundLines } from '../components/ui/BackgroundLines';
+import { AnimatedTestimonials } from '../components/ui/AnimatedTestimonials';
+import { BentoGrid, BentoGridItem } from '../components/ui/BentoGrid';
+import useAuthStore from '../store/authStore';
+
+const SkeletonSecurity = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-2xl bg-gradient-to-br from-gray-200 via-gray-100 to-white dark:from-neutral-800 dark:to-neutral-900 border border-white/40 justify-center items-center overflow-hidden">
+    <motion.div
+      animate={{ x: [-20, 20, -20] }}
+      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      className="relative flex items-center justify-center p-4 bg-white/50 backdrop-blur-sm rounded-full shadow-sm"
+    >
+      <motion.svg
+        animate={{ scale: [1, 1.1, 1], rotate: [-10, 10, -10] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      >
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </motion.svg>
+    </motion.div>
+  </div>
+);
+
+const SkeletonFast = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-2xl bg-gradient-to-br from-blue-100 via-white to-blue-50 dark:from-neutral-800 dark:to-neutral-900 border border-white/40 justify-center items-center overflow-hidden relative">
+    <motion.div animate={{ x: ['-200%', '200%'] }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }} className="absolute h-1 w-1/3 bg-blue-400 rounded-full blur-[2px]" style={{ top: '30%' }} />
+    <motion.div animate={{ x: ['-200%', '200%'] }} transition={{ duration: 1.2, repeat: Infinity, ease: "linear", delay: 0.2 }} className="absolute h-[2px] w-1/4 bg-sky-400 rounded-full blur-[1px]" style={{ top: '50%' }} />
+    <motion.div animate={{ x: ['-200%', '200%'] }} transition={{ duration: 1.8, repeat: Infinity, ease: "linear", delay: 0.5 }} className="absolute h-2 w-1/6 bg-indigo-400 rounded-full blur-[4px]" style={{ top: '70%' }} />
+    <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 0.5, repeat: Infinity }} className="z-10 bg-white/60 backdrop-blur-md p-3 rounded-full shadow-sm border border-white">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+    </motion.div>
+  </div>
+);
+
+const SkeletonCitations = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-2xl bg-gradient-to-tr from-green-100 to-emerald-50 dark:from-neutral-800 dark:to-neutral-900 border border-white/40 justify-center items-center overflow-hidden relative">
+    <div className="w-[120px] h-[80px] bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-white/60 p-2 flex flex-col gap-2 relative">
+      <div className="w-full h-1.5 bg-gray-200 rounded-full"></div>
+      <div className="w-3/4 h-1.5 bg-gray-200 rounded-full"></div>
+      <div className="w-5/6 h-1.5 bg-gray-200 rounded-full"></div>
+      <motion.div animate={{ width: ["0%", "100%", "0%"], left: ["0%", "0%", "100%"] }} transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }} className="absolute h-2 bg-emerald-300/60 rounded" style={{ top: '8px' }} />
+    </div>
+    <motion.div animate={{ x: [-30, 30, -30], y: [-10, 10, -10] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="absolute p-2 bg-white/80 backdrop-blur-md shadow-sm rounded-full border border-white">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    </motion.div>
+  </div>
+);
+
+const SkeletonArtifacts = () => (
+   <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-2xl bg-gradient-to-br from-purple-100 to-fuchsia-50 py-4 dark:from-neutral-800 dark:to-neutral-900 border border-white/40 justify-center items-center overflow-hidden relative">
+      <motion.div animate={{ rotate: 360 }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }} className="relative w-24 h-24">
+         <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }} className="absolute inset-0 m-auto w-10 h-10 bg-white/80 backdrop-blur-md rounded-xl shadow-sm border border-white flex items-center justify-center">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+         </motion.div>
+         <motion.div animate={{ y: [-15, 15, -15] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-3 -left-3 w-8 h-8 bg-white/80 backdrop-blur-md rounded-xl shadow-sm border border-white p-1.5"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#d946ef" strokeWidth="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></motion.div>
+         <motion.div animate={{ y: [15, -15, 15] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }} className="absolute -bottom-3 -right-3 w-8 h-8 bg-white/80 backdrop-blur-md rounded-xl shadow-sm border border-white p-1.5"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></motion.div>
+      </motion.div>
+   </div>
+);
+
+const SkeletonWebSearch = () => (
+   <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-2xl bg-gradient-to-br from-orange-100 to-amber-50 dark:from-neutral-800 dark:to-neutral-900 border border-white/40 justify-center items-center overflow-hidden relative">
+      <div className="w-16 h-16 bg-white/60 backdrop-blur-md rounded-full border border-white flex items-center justify-center relative overflow-hidden shadow-sm">
+         <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="absolute -inset-1 w-[120%] h-[120%] border-t-[3px] border-orange-500 rounded-full blur-[1px]" style={{ transformOrigin: "center" }} />
+         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="relative z-10"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+      </div>
+      <motion.div animate={{ x: [-40, 40, -40] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-4 mx-auto w-12 h-[3px] bg-white/80 rounded-full blur-[1px]"></motion.div>
+   </div>
+);
+
+const SkeletonResponsive = () => (
+   <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-2xl bg-gradient-to-tr from-cyan-100 to-sky-50 dark:from-neutral-800 dark:to-neutral-900 border border-white/40 justify-center items-center overflow-hidden relative flex-row gap-4 px-4">
+      <motion.div animate={{ height: ["50%", "80%", "50%"], width: ["20%", "40%", "20%"] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="bg-white/80 backdrop-blur-md border border-white rounded-xl shadow-sm min-w-[30px]" />
+      <motion.div animate={{ height: ["80%", "50%", "80%"], width: ["40%", "20%", "40%"] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="bg-white/80 backdrop-blur-md border border-white rounded-xl shadow-sm min-w-[50px] flex-1 max-w-[150px]" />
+   </div>
+);
 
 export default function LandingPage() {
   const containerRef = useRef(null);
   const [entered, setEntered] = useState(false);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     const timer = setTimeout(() => setEntered(true), 1700);
@@ -43,15 +121,67 @@ export default function LandingPage() {
   return (
     <div ref={containerRef} className="min-h-screen relative font-sans overflow-hidden" style={{ background: '#FAFAFA', fontFamily: '"Inter", "system-ui", sans-serif' }}>
       
-      {/* Background Mesh Gradient Orbs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full bg-[#0ea5e9]/10 blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] rounded-full bg-purple-500/10 blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute bottom-[10%] left-[20%] w-[60%] h-[40%] rounded-full bg-blue-400/5 blur-[120px] pointer-events-none z-0"></div>
+      {/* Aurora Background Effects */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <style>
+          {`
+            @keyframes drift {
+              0% { transform: translate(0, 0) scale(1); }
+              33% { transform: translate(5%, 10%) scale(1.1); }
+              66% { transform: translate(-5%, 5%) scale(0.95); }
+              100% { transform: translate(0, 0) scale(1); }
+            }
+            @keyframes drift-reverse {
+              0% { transform: translate(0, 0) scale(1); }
+              33% { transform: translate(-8%, -5%) scale(0.9); }
+              66% { transform: translate(5%, -10%) scale(1.15); }
+              100% { transform: translate(0, 0) scale(1); }
+            }
+          `}
+        </style>
+        
+        {/* Deep Indigo/Purple Orb */}
+        <div 
+          className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full opacity-[0.14] blur-[120px]"
+          style={{ 
+            background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)',
+            animation: 'drift 25s infinite ease-in-out'
+          }}
+        />
+        
+        {/* Electric Blue Orb */}
+        <div 
+          className="absolute bottom-[-15%] right-[-10%] w-[80%] h-[80%] rounded-full opacity-[0.12] blur-[140px]"
+          style={{ 
+            background: 'radial-gradient(circle, #0ea5e9 0%, transparent 70%)',
+            animation: 'drift-reverse 30s infinite ease-in-out'
+          }}
+        />
+        
+        {/* Mint/Teal Accent */}
+        <div 
+          className="absolute top-[20%] right-[10%] w-[50%] h-[50%] rounded-full opacity-[0.08] blur-[100px]"
+          style={{ 
+            background: 'radial-gradient(circle, #10b981 0%, transparent 70%)',
+            animation: 'drift 20s infinite ease-in-out'
+          }}
+        />
+        
+        {/* Soft Pink Highlight */}
+        <div 
+          className="absolute bottom-[20%] left-[5%] w-[40%] h-[40%] rounded-full opacity-[0.06] blur-[90px]"
+          style={{ 
+            background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)',
+            animation: 'drift-reverse 22s infinite ease-in-out'
+          }}
+        />
+      </div>
       
       <Navbar />
 
       {/* ===== HERO SECTION ===== */}
-      <div id="product" className="relative overflow-hidden" style={{ minHeight: '100vh' }}>
+      <BackgroundLines className="relative z-10 font-sans" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div id="product" className="relative w-full overflow-hidden flex-1">
 
         {/* Keyboard */}
         <motion.img
@@ -130,12 +260,71 @@ export default function LandingPage() {
               transition={{ duration: 0.6, delay: 0.6 }}
               className="flex justify-center gap-4 flex-wrap mb-14"
             >
-              <Link to="/signup" className="px-8 py-3.5 bg-black hover:bg-gray-800 text-white rounded-[999px] font-bold text-[1rem] no-underline inline-flex items-center justify-center transition-colors">
-                Get Started Free
-              </Link>
-              <a href="#how-it-works" className="px-8 py-3.5 bg-white border border-gray-200 hover:border-gray-400 text-black rounded-[999px] font-bold text-[1rem] no-underline inline-flex items-center justify-center transition-colors">
-                See How It Works
-              </a>
+              {user ? (
+                <Link
+                  to="/notebooks"
+                  className="no-underline inline-flex items-center justify-center gap-3 transition-all"
+                  style={{
+                    padding: '1rem 2.5rem',
+                    borderRadius: '999px',
+                    background: 'rgba(255,255,255,0.45)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.7)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.3)',
+                    color: '#111',
+                    fontSize: '1.05rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                  </svg>
+                  Your Notebooks
+                </Link>
+              ) : (
+                <>
+                  <Link 
+                    to="/signup" 
+                    className="no-underline inline-flex items-center justify-center transition-all group relative overflow-hidden"
+                    style={{
+                      padding: '1rem 2.5rem',
+                      borderRadius: '999px',
+                      background: 'rgba(17,17,17,0.9)',
+                      backdropFilter: 'blur(20px)',
+                      WebkitBackdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {/* Shiny accent layer */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full transition-transform duration-700 group-hover:translate-x-full" />
+                    Get Started Free
+                  </Link>
+                  <a 
+                    href="#how-it-works" 
+                    className="no-underline inline-flex items-center justify-center transition-all"
+                    style={{
+                      padding: '1rem 2.5rem',
+                      borderRadius: '999px',
+                      background: 'rgba(255,255,255,0.45)',
+                      backdropFilter: 'blur(20px)',
+                      WebkitBackdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255,255,255,0.7)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.3)',
+                      color: '#111',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    See How It Works
+                  </a>
+                </>
+              )}
             </motion.div>
           </div>
 
@@ -144,58 +333,60 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.8 }}
-            className="w-full max-w-[700px] mx-auto bg-[#F0F1F3] rounded-[999px] py-5 px-6 flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 items-center mt-4"
+            className="w-full max-w-[750px] mx-auto rounded-[999px] py-4 px-6 flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 items-center mt-6 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.05)]"
+            style={{
+              background: 'rgba(255,255,255,0.25)',
+              backdropFilter: 'blur(25px)',
+              WebkitBackdropFilter: 'blur(25px)',
+            }}
           >
-            <div className="bg-white rounded-full px-5 py-2.5 flex items-center gap-2.5 shadow-sm font-semibold text-black text-[0.85rem]">
-              <div className="w-[18px] h-[18px] bg-black rounded-full flex items-center justify-center text-white">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            {[
+              { label: 'Private and secure' },
+              { label: 'Instant Answer' },
+              { label: 'Source Citation' },
+            ].map((item, idx) => (
+              <div 
+                key={idx}
+                className="rounded-full px-5 py-2.5 flex items-center gap-2.5 font-semibold text-black text-[0.88rem] transition-all hover:scale-105"
+                style={{
+                  background: 'rgba(255,255,255,0.45)',
+                  border: '1px solid rgba(255,255,255,0.6)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
+                }}
+              >
+                <div className="w-[18px] h-[18px] bg-black text-white rounded-full flex items-center justify-center">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                {item.label}
               </div>
-              Private and secure
-            </div>
-            <div className="bg-white rounded-full px-5 py-2.5 flex items-center gap-2.5 shadow-sm font-semibold text-black text-[0.85rem]">
-              <div className="w-[18px] h-[18px] bg-black rounded-full flex items-center justify-center text-white">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </div>
-              Instant Answer
-            </div>
-            <div className="bg-white rounded-full px-5 py-2.5 flex items-center gap-2.5 shadow-sm font-semibold text-black text-[0.85rem]">
-              <div className="w-[18px] h-[18px] bg-black rounded-full flex items-center justify-center text-white">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </div>
-              Source Citation
-            </div>
+            ))}
           </motion.div>
         </motion.section>
-      </div>
+        </div>
+      </BackgroundLines>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section id="how-it-works" className="pt-24 pb-20 px-6 w-full max-w-[1100px] mx-auto text-left">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>, title: 'Upload', desc: 'Drop your PDF, TXT, or Markdown files. We process them in seconds.' },
-            { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>, title: 'Ask', desc: 'Type any question in natural language.' },
-            { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>, title: 'Get Answers', desc: 'Receive grounded answers with exact source citations.' },
-          ].map((card, i) => (
-            <SpotlightCard
-              key={card.title}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.3 } }}
-              className="p-8 flex flex-col min-h-[260px] cursor-default"
-            >
-              <div className="w-11 h-11 rounded-[12px] flex items-center justify-center mb-auto bg-white/80 border border-gray-100 shadow-sm relative z-10 backdrop-blur-sm">
-                {card.icon}
-              </div>
-              <div className="mt-auto relative z-10">
-                <h3 className="text-[1.2rem] font-bold text-black mb-2">{card.title}</h3>
-                <p className="text-gray-500 font-medium leading-relaxed text-[0.95rem]">{card.desc}</p>
-              </div>
-            </SpotlightCard>
-          ))}
-        </div>
+      <section id="how-it-works" className="py-12 w-full max-w-[1100px] mx-auto text-left relative z-20 bg-transparent">
+        <AnimatedTestimonials autoplay={true} testimonials={[
+          {
+            quote: 'Drop your PDF, TXT, or Markdown files into your private notebook. Our optimized local pipeline processes and indexes everything in seconds.',
+            name: '1. Upload',
+            designation: 'Secure Document Ingestion',
+            src: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=3540&auto=format&fit=crop',
+          },
+          {
+            quote: 'Type any question in natural language. The engine instantly scans your private library, synthesizing context and finding nuances across multiple resources.',
+            name: '2. Ask',
+            designation: 'Conversational Intelligence',
+            src: '/ask_image_2.png',
+          },
+          {
+            quote: 'Receive grounded, narrative answers instantly, fully backed by exact source citations. Verify insights without losing focus.',
+            name: '3. Get Answers',
+            designation: 'Grounded Insights',
+            src: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=3540&auto=format&fit=crop',
+          }
+        ]} />
       </section>
 
       {/* Divider */}
@@ -216,29 +407,61 @@ export default function LandingPage() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <BentoGrid className="max-w-[1100px] mx-auto">
           {[
-            { content: 'Your documents are stored in your private account. No one else can access them.', iconEl: <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div> },
-            { content: 'Powered by state-of-the-art LLMs with sub-second response times via Groq.', iconEl: <div className="flex gap-2"><div className="w-8 h-8 rounded-[6px] bg-white shadow-sm flex items-center justify-center text-xs font-bold">💳</div><div className="w-8 h-8 rounded-[6px] bg-white shadow-sm flex items-center justify-center text-xs font-bold">🏛</div><div className="w-8 h-8 rounded-[6px] bg-white shadow-sm flex items-center justify-center text-xs font-bold">₿</div></div> },
-            { content: 'Every answer shows exactly which document and section it came from.', iconEl: <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black shadow-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div> },
-            { content: 'Generate quizzes, flashcards, mind maps, and executive summaries with one click.', iconEl: <div className="flex gap-2"><div className="w-8 h-8 rounded-[6px] bg-white shadow-sm flex items-center justify-center text-xs font-bold">📄</div><div className="w-8 h-8 rounded-[6px] bg-white shadow-sm flex items-center justify-center text-xs font-bold">🏛</div></div> },
-            { content: "Search the entire web with AI synthesis when your documents aren't enough.", iconEl: <div className="w-8 h-8 rounded-[6px] bg-white shadow-sm flex items-center justify-center text-black"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div> },
-            { content: 'Responsive ui through out the website.', iconEl: <div className="flex gap-2"><div className="h-8 px-2 rounded-full bg-white shadow-sm flex items-center justify-center text-[0.6rem] font-bold uppercase tracking-wide">Xero</div><div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-[0.6rem] font-bold uppercase">QB</div></div> },
-          ].map((feature, i) => (
-            <SpotlightCard
+            {
+              title: "100% Private & Secure",
+              description: "Your documents are stored securely in your private account workspace. No one else can access them, and models do not train on your private repository.",
+              header: <SkeletonSecurity />,
+              className: "md:col-span-2 bg-slate-50/60 hover:bg-slate-100/80 dark:bg-slate-900/40",
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+            },
+            {
+              title: "Blazing Fast Logic",
+              description: "Powered by state-of-the-art LLMs with sub-second response speeds via Groq LPUs.",
+              header: <SkeletonFast />,
+              className: "md:col-span-1 bg-blue-50/50 hover:bg-blue-100/60 dark:bg-blue-900/20 border-blue-100/20",
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>,
+            },
+            {
+              title: "Verifiable Source Citations",
+              description: "Every answer shows exactly which document and section it came from. Click the citation to automatically jump to the specific page and highlight.",
+              header: <SkeletonCitations />,
+              className: "md:col-span-1 bg-emerald-50/50 hover:bg-emerald-100/60 dark:bg-emerald-900/20 border-emerald-100/20",
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+            },
+            {
+              title: "Generate Interactive Artifacts",
+              description: "Turn giant PDF handbooks into quizzes, flashcards, mind maps, and executive summaries with a single click in the studio.",
+              header: <SkeletonArtifacts />,
+              className: "md:col-span-2 bg-purple-50/50 hover:bg-purple-100/60 dark:bg-purple-900/20 border-purple-100/20",
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
+            },
+            {
+              title: "Real-Time Web Search",
+              description: "Search the entire web with deep AI synthesis when your uploaded documents aren't enough to secure an answer.",
+              header: <SkeletonWebSearch />,
+              className: "md:col-span-2 bg-orange-50/50 hover:bg-orange-100/60 dark:bg-orange-900/20 border-orange-100/20",
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
+            },
+            {
+              title: "Fully Responsive UI",
+              description: "Experience liquid glass aesthetics across any device size, right through the app.",
+              header: <SkeletonResponsive />,
+              className: "md:col-span-1 bg-cyan-50/50 hover:bg-cyan-100/60 dark:bg-cyan-900/20 border-cyan-100/20",
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>,
+            },
+          ].map((item, i) => (
+            <BentoGridItem
               key={i}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
-              whileHover={{ y: -6, transition: { duration: 0.3 } }}
-              className="p-8 text-left min-h-[200px] flex flex-col justify-end cursor-default"
-            >
-              <p className="text-black font-medium leading-relaxed text-[0.95rem] relative z-10">{feature.content}</p>
-            </SpotlightCard>
+              title={item.title}
+              description={item.description}
+              header={item.header}
+              icon={item.icon}
+              className={item.className}
+            />
           ))}
-        </div>
+        </BentoGrid>
       </section>
 
       {/* Footer */}

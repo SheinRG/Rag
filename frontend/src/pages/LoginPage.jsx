@@ -12,7 +12,7 @@ export default function LoginPage() {
     e.preventDefault();
     clearError();
     const result = await login(email, password);
-    if (result.success) navigate('/dashboard');
+    if (result.success) navigate('/notebooks');
   };
 
   return (

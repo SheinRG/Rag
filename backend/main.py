@@ -16,6 +16,7 @@ from routes.document_routes import router as document_router
 from routes.query_routes import router as query_router
 from routes.studio_routes import router as studio_router
 from routes.search_routes import router as search_router
+from routes.notebook_routes import router as notebook_router
 
 # ─── Logging ───
 logging.basicConfig(
@@ -88,6 +89,7 @@ app.include_router(document_router, prefix="/api/documents")
 app.include_router(query_router, prefix="/api")
 app.include_router(studio_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
+app.include_router(notebook_router, prefix="/api/notebooks")
 
 
 # ─── Health Check ───

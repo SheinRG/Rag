@@ -43,10 +43,11 @@ export default function MessageList({ messages, onReask, activeDoc }) {
           </div>
         ) : (
           <>
-            <span style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>💬</span>
-            <h3 style={{ fontWeight: 400, color: 'var(--color-text)', fontSize: '1.5rem' }}>How can I help you today?</h3>
-            <p style={{ fontSize: '1rem', color: 'var(--color-text-muted)', maxWidth: '400px', textAlign: 'center', marginTop: '0.5rem' }}>
-              Select a document from the left to get started, or ask a general question.
+            <h3 style={{ fontWeight: 600, color: '#111', fontSize: '1.75rem', fontFamily: '"Rubik", sans-serif', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              What's on your mind?
+            </h3>
+            <p style={{ fontSize: '1rem', color: '#6b7280', maxWidth: '420px', textAlign: 'center', lineHeight: '1.6', fontWeight: 400 }}>
+              Connect your documents or search the web to start a research session. I'll help you dive deep into your data.
             </p>
           </>
         )}

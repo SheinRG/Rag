@@ -40,8 +40,8 @@ export default function Navbar() {
 
   const navLinks = [
     { id: 'product', label: 'Product', type: 'anchor', href: '#product' },
+    { id: 'how-it-works', label: 'How It Works', type: 'anchor', href: '#how-it-works' },
     { id: 'features', label: 'Features', type: 'anchor', href: '#features' },
-    ...(user ? [{ id: 'dashboard', label: 'Dashboard', type: 'link', to: '/dashboard' }] : []),
   ];
 
   return (
@@ -73,7 +73,7 @@ export default function Navbar() {
                 {(isHovered || (isActive && !hoveredSection)) && (
                   <motion.div
                     layoutId="navbar-pill"
-                    className="absolute inset-0 bg-gray-200/90 rounded-full z-0"
+                    className="absolute inset-0 bg-white/80 rounded-full z-0 border border-white/50 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
@@ -163,8 +163,38 @@ export default function Navbar() {
             </div>
           ) : (
             <>
-              <Link to="/login" className="hidden sm:inline-block text-black font-bold text-[0.95rem] no-underline hover:text-gray-600 transition-colors">Log In</Link>
-              <Link to="/signup" className="px-6 py-[0.65rem] bg-black text-white rounded-[999px] font-bold text-[0.9rem] no-underline hover:bg-gray-800 transition-all shadow-md">
+              <div 
+                className="relative px-5 py-2 rounded-full font-semibold text-[0.95rem] transition-colors duration-300 no-underline cursor-pointer flex items-center justify-center"
+                onMouseEnter={() => setHoveredSection('login')}
+                onMouseLeave={() => setHoveredSection(null)}
+              >
+                <Link 
+                  to="/login" 
+                  className={`relative z-10 no-underline transition-colors duration-300 ${hoveredSection === 'login' ? 'text-black' : 'text-gray-500'}`}
+                >
+                  Log In
+                </Link>
+                {hoveredSection === 'login' && (
+                  <motion.div
+                    layoutId="navbar-pill"
+                    className="absolute inset-0 bg-white/80 rounded-full z-0 border border-white/50 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </div>
+              <Link 
+                to="/signup" 
+                className="ml-2 px-6 py-[0.65rem] text-white rounded-[999px] font-bold text-[0.9rem] no-underline transition-all relative overflow-hidden group shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                style={{
+                  background: 'rgba(17,17,17,0.9)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.15)',
+                }}
+              >
+                {/* Glossy highlight layer */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full transition-transform duration-700 group-hover:translate-x-full" />
                 Get Started
               </Link>
             </>

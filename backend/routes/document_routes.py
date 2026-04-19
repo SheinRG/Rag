@@ -5,7 +5,8 @@ Upload, list, status, and delete documents.
 
 import uuid
 import logging
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, status
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, status, Form
 
 from database import supabase
 from auth_middleware import get_current_user
@@ -22,6 +23,7 @@ router = APIRouter(tags=["Documents"])
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    notebook_id: Optional[str] = Form(None),
     user=Depends(get_current_user),
 ):
     """Upload a document and trigger background ingestion."""
@@ -54,6 +56,8 @@ async def upload_document(
             "status": "processing",
             "storage_path": storage_path,
         }
+        if notebook_id:
+            doc_data["notebook_id"] = notebook_id
 
         result = supabase.table("documents").insert(doc_data).execute()
         doc_id = result.data[0]["id"]
@@ -85,18 +89,27 @@ async def upload_document(
 
 
 @router.get("", response_model=list[DocumentResponse])
-async def list_documents(user=Depends(get_current_user)):
-    """List all documents for the current user."""
+async def list_documents(notebook_id: Optional[str] = None, user=Depends(get_current_user)):
+    """List all documents for the current user, optionally filtered by notebook."""
     try:
-        result = (
+        query = (
             supabase.table("documents")
-            .select("id, original_name, file_type, file_size, num_chunks, status, error_msg, created_at")
+            .select("id, original_name, file_type, file_size, num_chunks, status, error_msg, notebook_id, created_at")
             .eq("user_id", str(user.id))
-            .order("created_at", desc=True)
-            .execute()
         )
 
-        return [DocumentResponse(**doc) for doc in result.data]
+        if notebook_id:
+            query = query.eq("notebook_id", notebook_id)
+
+        result = query.order("created_at", desc=True).execute()
+
+        logger.info(f"List documents: notebook_id={notebook_id}, returned={len(result.data)} docs")
+
+        docs = []
+        for doc in result.data:
+            doc.setdefault("notebook_id", None)
+            docs.append(DocumentResponse(**doc))
+        return docs
 
     except Exception as e:
         logger.error(f"Failed to list documents: {e}")

@@ -39,6 +39,7 @@ class DocumentResponse(BaseModel):
     num_chunks: int
     status: str
     error_msg: Optional[str] = None
+    notebook_id: Optional[str] = None
     created_at: str
 
 

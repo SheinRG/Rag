@@ -13,7 +13,8 @@ export default function SummaryModal({ data, onClose }) {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0,
-        background: 'var(--color-modal-overlay)',
+        background: 'rgba(0,0,0,0.15)',
+        backdropFilter: 'blur(10px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 1000, padding: '2rem',
       }}
@@ -24,25 +25,40 @@ export default function SummaryModal({ data, onClose }) {
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--color-card-bg)',
-          borderRadius: '20px',
-          padding: '2rem',
+          background: 'rgba(253, 247, 230, 0.85)',
+          backdropBlur: '20px',
+          borderRadius: '32px',
+          padding: '2.5rem',
           width: '100%',
-          maxWidth: '700px',
+          maxWidth: '720px',
           maxHeight: '85vh',
           overflow: 'auto',
-          border: '1px solid var(--color-border)',
+          border: '1px solid rgba(255, 255, 255, 0.6)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.1)',
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text)' }}>
-            📋 Executive Summary
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600, color: '#D97706', tracking: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <line x1="10" y1="9" x2="8" y2="9" />
+            </svg>
+            Executive Summary
           </h2>
           <button onClick={onClose} style={{
-            border: 'none', background: 'none', cursor: 'pointer',
-            fontSize: '1.25rem', color: 'var(--color-text-muted)',
-          }}>✕</button>
+            border: 'none', background: 'rgba(0,0,0,0.05)', cursor: 'pointer',
+            padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', 
+            justifyContent: 'center', transition: 'all 0.2s ease'
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
 
         {/* Markdown Content */}

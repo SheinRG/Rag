@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { HoverBorderGradient } from '../ui/HoverBorderGradient';
 
 export default function ChatInput({ onSend, disabled }) {
   const [question, setQuestion] = useState('');
@@ -26,10 +27,12 @@ export default function ChatInput({ onSend, disabled }) {
   };
 
   return (
-    <div className="absolute bottom-6 left-0 right-0 px-4 md:px-8 pointer-events-none z-10">
-      <form
+    <div className="absolute bottom-6 left-0 right-0 px-4 md:px-8 pointer-events-none z-10 flex justify-center">
+      <HoverBorderGradient
+        as="form"
         onSubmit={handleSubmit}
-        className="relative max-w-4xl mx-auto flex items-end bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[28px] overflow-hidden focus-within:ring-2 focus-within:ring-white focus-within:border-white/50 transition-all p-1 pointer-events-auto"
+        containerClassName="max-w-4xl w-full pointer-events-auto rounded-[28px]"
+        className="w-full flex items-end bg-white/80 dark:bg-[#1a1a2e]/80 backdrop-blur-xl focus-within:bg-white/90 transition-all p-1"
       >
         <textarea
           rows="1"
@@ -45,6 +48,7 @@ export default function ChatInput({ onSend, disabled }) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             type="submit"
             disabled={disabled || !question.trim()}
             className={`p-2 rounded-full flex items-center justify-center transition-all ${
@@ -59,7 +63,7 @@ export default function ChatInput({ onSend, disabled }) {
             </svg>
           </motion.button>
         </div>
-      </form>
+      </HoverBorderGradient>
     </div>
   );
 }

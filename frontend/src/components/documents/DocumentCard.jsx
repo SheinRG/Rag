@@ -53,6 +53,12 @@ function formatSize(bytes) {
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
+const typeStyles = {
+  pdf: { color: 'text-rose-500', bg: 'bg-rose-50/50', border: 'border-rose-100/50' },
+  txt: { color: 'text-blue-500', bg: 'bg-blue-50/50', border: 'border-blue-100/50' },
+  md: { color: 'text-emerald-500', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50' },
+};
+
 export default function DocumentCard({ doc, onDelete }) {
   const st = statusColors[doc.status] || statusColors.processing;
   const pollStatus = useDocumentStore((state) => state.pollDocumentStatus);
@@ -64,6 +70,8 @@ export default function DocumentCard({ doc, onDelete }) {
   const [editName, setEditName] = useState(doc.original_name);
   const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef(null);
+
+  const style = typeStyles[doc.file_type] || { color: 'text-gray-500', bg: 'bg-gray-50/50', border: 'border-gray-100/50' };
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -97,40 +105,40 @@ export default function DocumentCard({ doc, onDelete }) {
 
 return (
     <motion.div
-      whileHover={{ scale: 1.01 }}
+      whileHover={{ scale: 1.015, y: -1 }}
       whileTap={{ scale: 0.99 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
       onClick={() => doc.status === 'ready' && setActiveDocument(doc.id)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: isSelected ? 'var(--color-badge-bg)' : 'var(--color-card-bg)',
-        borderRadius: '10px',
+        background: isSelected ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)',
+        backdropFilter: 'blur(12px)',
+        borderRadius: '16px',
         padding: '0.75rem',
-        border: `1px solid ${isSelected ? 'var(--color-primary-400)' : 'var(--color-border)'}`,
-        display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+        border: `1.2px solid ${isSelected ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.4)'}`,
+        display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
         cursor: doc.status === 'ready' ? 'pointer' : 'default',
+        boxShadow: isSelected ? '0 4px 15px rgba(0,0,0,0.03)' : 'none',
+        transition: 'all 0.2s ease',
       }}
     >
-      <span className="flex-shrink-0 flex items-center justify-center text-gray-400 mt-0.5">
+      <div className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border ${style.bg} ${style.border} ${style.color}`}>
         {typeIcons[doc.file_type] || defaultIcon}
-      </span>
+      </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontWeight: 400, fontSize: '0.82rem', color: 'var(--color-text)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          margin: 0,
-        }}>{doc.original_name}</p>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-[0.8rem] text-gray-800 truncate m-0 leading-tight">
+          {doc.original_name}
+        </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-          <span style={{
-            fontSize: '0.65rem', fontWeight: 400,
-            padding: '0.1rem 0.4rem', borderRadius: '5px',
-            background: st.bg, color: st.color,
-          }}>{st.label}</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{formatSize(doc.file_size)}</span>
+        <div className="flex items-center gap-2 mt-2">
+          <span className={`text-[0.62rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${st.bg} ${st.color}`}>
+            {st.label}
+          </span>
+          <span className="text-[0.65rem] text-gray-400 font-medium">{formatSize(doc.file_size)}</span>
           {doc.num_chunks > 0 && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>• {doc.num_chunks} chunks</span>
+            <span className="text-[0.65rem] text-gray-400 font-medium">• {doc.num_chunks} chunks</span>
           )}
         </div>
       </div>

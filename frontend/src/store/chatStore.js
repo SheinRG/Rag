@@ -11,6 +11,43 @@ const useChatStore = create(
       isStreaming: false,
       activeDocumentId: null,
       messageHistory: {},
+      notebookHistory: {}, // { [nbId]: { messages, activeDocumentId, messageHistory } }
+      currentNotebookId: null,
+
+      switchNotebook: (notebookId) => {
+        const { currentNotebookId, messages, activeDocumentId, messageHistory, notebookHistory } = get();
+        
+        // Don't do anything if it's the same notebook
+        if (notebookId === currentNotebookId) return;
+
+        // 1. Save current state into history if we were in a notebook
+        const newNotebookHistory = { ...notebookHistory };
+        if (currentNotebookId || currentNotebookId === null) {
+          // Use 'default' for orphan documents (null notebookId)
+          const key = currentNotebookId || 'default';
+          newNotebookHistory[key] = {
+            messages,
+            activeDocumentId,
+            messageHistory
+          };
+        }
+
+        // 2. Load the state for the new notebook
+        const targetKey = notebookId || 'default';
+        const saved = newNotebookHistory[targetKey] || {
+          messages: [],
+          activeDocumentId: null,
+          messageHistory: {}
+        };
+
+        set({
+          currentNotebookId: notebookId,
+          messages: saved.messages,
+          activeDocumentId: saved.activeDocumentId,
+          messageHistory: saved.messageHistory,
+          notebookHistory: newNotebookHistory
+        });
+      },
 
       setActiveDocument: (docId) => {
         // Store current tab's messages before switching
@@ -186,8 +223,10 @@ const useChatStore = create(
       name: 'docmind-chat-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
-        activeDocumentId: state.activeDocumentId,
+        notebookHistory: state.notebookHistory,
+        currentNotebookId: state.currentNotebookId,
         messages: state.messages,
+        activeDocumentId: state.activeDocumentId,
         messageHistory: state.messageHistory,
       }),
     }

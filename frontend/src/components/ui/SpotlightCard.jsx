@@ -47,7 +47,7 @@ export default function SpotlightCard({ children, className = "", spotlightColor
     >
 
       <div
-        className="pointer-events-none absolute -inset-px opacity-0 transition duration-300 z-0"
+        className="pointer-events-none absolute -inset-px opacity-0 transition duration-150 z-0"
         style={{
           opacity,
           background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,

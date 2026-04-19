@@ -7,6 +7,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
+import NotebooksPage from './pages/NotebooksPage';
 
 export default function App() {
   const loadFromStorage = useAuthStore((s) => s.loadFromStorage);
@@ -29,6 +30,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notebooks"
+          element={
+            <ProtectedRoute>
+              <NotebooksPage />
             </ProtectedRoute>
           }
         />

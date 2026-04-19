@@ -141,7 +141,7 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
               key={feature.id}
               onClick={() => handleFeatureClick(feature)}
               disabled={loadingFeature === feature.id}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center ${
                 feature.comingSoon 
                   ? 'opacity-40 cursor-not-allowed text-gray-400' 
                   : 'hover:bg-white cursor-pointer'
@@ -186,11 +186,16 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
           {studioFeatures.map((feature, index) => (
             <motion.button
               key={feature.id}
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.3 }}
-              whileHover={{ scale: 1.02, x: 4 }}
-              whileTap={{ scale: 0.98 }}
+              transition={{ 
+                delay: index * 0.04, 
+                duration: 0.15,
+                scale: { type: 'spring', stiffness: 500, damping: 25 },
+                x: { type: 'spring', stiffness: 500, damping: 25 }
+              }}
+              whileHover={{ scale: 1.02, x: 5 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => handleFeatureClick(feature)}
               disabled={loadingFeature === feature.id}
               style={{ backgroundColor: feature.color }}

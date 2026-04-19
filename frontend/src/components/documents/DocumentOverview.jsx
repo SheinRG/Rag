@@ -85,31 +85,25 @@ export default function DocumentOverview({ document }) {
                 key={i}
                 whileHover={{ scale: 1.02, y: -2, backgroundColor: 'white' }}
                 whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
                 onClick={() => sendMessage(suggestion)}
                 style={{
-                  padding: '1rem 1.25rem',
-                  borderRadius: '16px',
+                  padding: '1.1rem 1.5rem',
+                  borderRadius: '24px',
                   border: '1px solid var(--color-border)',
                   background: 'rgba(255, 255, 255, 0.4)',
                   color: 'var(--color-text)',
-                  fontSize: '0.9rem',
+                  fontSize: '0.92rem',
                   textAlign: 'left',
                   cursor: 'pointer',
                   lineHeight: 1.5,
                   fontFamily: 'inherit',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.75rem',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                  transition: 'background-color 0.2s ease'
+                  transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ 
-                  width: '24px', height: '24px', borderRadius: '50%', 
-                  background: 'var(--color-primary-100)', color: 'var(--color-primary-600)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1rem', flexShrink: 0
-                }}>→</div>
                 {suggestion}
               </motion.button>
             ))}

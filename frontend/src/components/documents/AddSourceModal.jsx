@@ -5,7 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { createPortal } from 'react-dom';
 import useDocumentStore from '../../store/documentStore';
 
-export default function AddSourceModal({ isOpen, onClose }) {
+export default function AddSourceModal({ isOpen, onClose, notebookId }) {
   const { uploadDocument, uploading, uploadProgress } = useDocumentStore();
   const [error, setError] = useState('');
 
@@ -17,7 +17,7 @@ export default function AddSourceModal({ isOpen, onClose }) {
     }
     for (const file of accepted) {
       try {
-        await uploadDocument(file);
+        await uploadDocument(file, notebookId);
         if (accepted.length === 1 || file === accepted[accepted.length - 1]) {
            onClose(); // Close modal on successful upload of last file
         }

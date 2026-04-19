@@ -6,18 +6,21 @@ import DocumentCard from './DocumentCard';
 import DocumentOverview from './DocumentOverview';
 import AddSourceModal from './AddSourceModal';
 import SpotlightCard from '../ui/SpotlightCard';
+import { HoverBorderGradient } from '../ui/HoverBorderGradient';
 
-export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
+export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, notebookId }) {
   const { documents, fetchDocuments, deleteDocument, loading } = useDocumentStore();
   const { activeDocumentId, setActiveDocument } = useChatStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [webSearchQuery, setWebSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchDocuments();
-    const interval = setInterval(fetchDocuments, 10000);
+    // Clear stale documents immediately when switching notebooks
+    useDocumentStore.getState().documents.length > 0 && useDocumentStore.setState({ documents: [] });
+    fetchDocuments(notebookId);
+    const interval = setInterval(() => fetchDocuments(notebookId), 10000);
     return () => clearInterval(interval);
-  }, [fetchDocuments]);
+  }, [fetchDocuments, notebookId]);
 
   const activeDoc = documents.find(d => d.id === activeDocumentId);
 
@@ -41,7 +44,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
 
         {/* Search shortcut instead of number */}
         <button
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-black hover:bg-gray-100 transition-all duration-200"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-black hover:bg-gray-100 transition-all duration-200"
           title="Search the web"
           onClick={onToggle}
         >
@@ -56,7 +59,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
             <div 
               key={doc.id}
               onClick={() => setActiveDocument(doc.id)}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs transition-all duration-200 cursor-pointer shadow-sm ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center text-xs transition-all duration-200 cursor-pointer shadow-sm ${
                 activeDocumentId === doc.id 
                   ? 'bg-black text-white scale-110 shadow-md' 
                   : 'bg-white/80 text-gray-400 hover:bg-white hover:text-black'
@@ -73,7 +76,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
 
         {/* Add source shortcut */}
         <button
-          className="mt-auto w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all duration-200"
+          className="mt-auto w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all duration-200"
           title="Add Source"
           onClick={() => { onToggle(); setTimeout(() => setIsModalOpen(true), 200); }}
         >
@@ -116,7 +119,11 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
       </div>
 
       <div className="px-3 mt-4 mb-3">
-        <SpotlightCard className="p-1" hasAurora>
+        <HoverBorderGradient
+          as="div"
+          containerClassName="w-full rounded-[24px]"
+          className="w-full bg-white/60 dark:bg-black/60 backdrop-blur-xl p-1"
+        >
           <form
             onSubmit={(e) => { 
                 e.preventDefault(); 
@@ -125,9 +132,9 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
                     setWebSearchQuery('');
                 }
             }}
-            className="flex flex-col pt-1 pl-1 pr-1 text-gray-700"
+            className="flex flex-col pt-1 pl-1 pr-1 text-gray-700 w-full"
           >
-             <div className="flex items-end gap-1.5">
+             <div className="flex items-end gap-1.5 w-full">
                 <div className="flex-1 min-h-[40px] flex items-center">
                     <textarea
                         value={webSearchQuery}
@@ -148,7 +155,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
                         }}
                         rows="1"
                         placeholder="Search the web for"
-                        className="w-full bg-transparent border-none outline-none text-[13px] placeholder-gray-500 py-2.5 px-2 resize-none leading-relaxed"
+                        className="w-full bg-transparent border-none outline-none text-[13px] placeholder-gray-500 py-2.5 px-2 resize-none leading-relaxed text-center"
                         style={{ height: '40px' }}
                     />
                 </div>
@@ -159,7 +166,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
                 </div>
              </div>
           </form>
-        </SpotlightCard>
+        </HoverBorderGradient>
       </div>
 
       {/* Document List */}
@@ -199,7 +206,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
 
       {/* Document Overview Panel removed - now in chat panel */}
 
-      <AddSourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddSourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} notebookId={notebookId} />
     </div>
   );
 }
