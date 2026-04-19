@@ -2,26 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { streamPost } from '../api/client';
 
-const cleanStorage = {
-  getItem: (name) => {
-    try {
-      const value = localStorage.getItem(name);
-      if (!value) return null;
-      const parsed = JSON.parse(value);
-      if (parsed.state?.messages) {
-        parsed.state.messages = parsed.state.messages.filter(
-          m => !m.content?.includes('clipboard')
-        );
-      }
-      return JSON.stringify(parsed);
-    } catch {
-      localStorage.removeItem(name);
-      return null;
-    }
-  },
-  setItem: () => {},
-  removeItem: () => {},
-};
+
 
 const useChatStore = create(
   persist(
@@ -64,16 +45,41 @@ const useChatStore = create(
       sendMessage: async (question) => {
         const { activeDocumentId } = get();
         
-        // Add user message
+        // Add user message + empty assistant message in one setState
         set((state) => ({
-          messages: [...state.messages, { role: 'user', content: question }],
+          messages: [
+            ...state.messages,
+            { role: 'user', content: question },
+            { role: 'assistant', content: '', sources: [] },
+          ],
           isStreaming: true,
         }));
 
-        // Add empty assistant message to stream into
-        set((state) => ({
-          messages: [...state.messages, { role: 'assistant', content: '', sources: [] }],
-        }));
+        // Token buffer — accumulate tokens and flush at ~30fps
+        let tokenBuffer = '';
+        let rafId = null;
+
+        const flushTokens = () => {
+          rafId = null;
+          if (!tokenBuffer) return;
+          const chunk = tokenBuffer;
+          tokenBuffer = '';
+          set((state) => {
+            const msgs = state.messages;
+            const last = msgs[msgs.length - 1];
+            const updated = { ...last, content: last.content + chunk };
+            // Mutate-in-place for the array, only replace last element
+            const next = msgs.slice(0, -1);
+            next.push(updated);
+            return { messages: next };
+          });
+        };
+
+        const scheduleFlush = () => {
+          if (rafId === null) {
+            rafId = requestAnimationFrame(flushTokens);
+          }
+        };
 
         try {
           const stream = await streamPost('/ask/stream', { 
@@ -106,27 +112,41 @@ const useChatStore = create(
                 const event = JSON.parse(jsonStr);
 
                 if (event.type === 'token') {
-                  set((state) => {
-                    const msgs = [...state.messages];
-                    const last = msgs[msgs.length - 1];
-                    msgs[msgs.length - 1] = { ...last, content: last.content + event.content };
-                    return { messages: msgs };
-                  });
+                  tokenBuffer += event.content;
+                  scheduleFlush();
                 } else if (event.type === 'sources') {
+                  // Flush any remaining tokens first
+                  if (rafId !== null) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                  }
+                  flushTokens();
                   set((state) => {
-                    const msgs = [...state.messages];
+                    const msgs = state.messages;
                     const last = msgs[msgs.length - 1];
-                    msgs[msgs.length - 1] = { ...last, sources: event.content };
-                    return { messages: msgs };
+                    const next = msgs.slice(0, -1);
+                    next.push({ ...last, sources: event.content });
+                    return { messages: next };
                   });
                 } else if (event.type === 'error') {
+                  if (rafId !== null) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                  }
                   set((state) => {
-                    const msgs = [...state.messages];
+                    const msgs = state.messages;
                     const last = msgs[msgs.length - 1];
-                    msgs[msgs.length - 1] = { ...last, content: event.content, isError: true };
-                    return { messages: msgs };
+                    const next = msgs.slice(0, -1);
+                    next.push({ ...last, content: event.content, isError: true });
+                    return { messages: next };
                   });
                 } else if (event.type === 'done') {
+                  // Flush remaining tokens before marking done
+                  if (rafId !== null) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                  }
+                  flushTokens();
                   set({ isStreaming: false });
                 }
               } catch {
@@ -134,18 +154,28 @@ const useChatStore = create(
               }
             }
           }
+          // Final flush in case there are leftover tokens
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          flushTokens();
           set({ isStreaming: false });
         } catch (err) {
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+          }
           console.error('Chat error:', err);
           set((state) => {
-            const msgs = [...state.messages];
+            const msgs = state.messages;
             const last = msgs[msgs.length - 1];
-            msgs[msgs.length - 1] = {
+            const next = msgs.slice(0, -1);
+            next.push({
               ...last,
               content: `Failed to connect to the AI: ${err.message}. Is the backend running?`,
               isError: true,
-            };
-            return { messages: msgs, isStreaming: false };
+            });
+            return { messages: next, isStreaming: false };
           });
         }
       },
@@ -154,11 +184,11 @@ const useChatStore = create(
     }),
     {
       name: 'docmind-chat-storage',
-      storage: createJSONStorage(() => cleanStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
-        messages: state.messages, 
         activeDocumentId: state.activeDocumentId,
-        messageHistory: state.messageHistory || {} 
+        messages: state.messages,
+        messageHistory: state.messageHistory,
       }),
     }
   )

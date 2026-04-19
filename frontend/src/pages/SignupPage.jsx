@@ -29,7 +29,7 @@ export default function SignupPage() {
       
       {/* Background Mesh Orbs */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full bg-[#0ea5e9]/10 blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] rounded-full bg-purple-500/10 blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none z-0"></div>
       
       <div className="text-center relative z-10 w-full max-w-[440px] px-4">
         {/* Logo */}
@@ -40,7 +40,10 @@ export default function SignupPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-white/60 backdrop-blur-xl rounded-[32px] p-8 sm:p-10 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-left">
+        <div 
+          className="bg-white/10 backdrop-blur-2xl backdrop-saturate-[180%] rounded-[32px] p-8 sm:p-10 border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07),inset_0_0_0_1px_rgba(255,255,255,0.4)] text-left"
+          style={{ background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)' }}
+        >
           <h1 className="text-[1.6rem] font-bold mb-2 text-black" style={{ fontFamily: '"Rubik", sans-serif', letterSpacing: '-0.02em' }}>Create your account</h1>
           <p className="text-gray-500 mb-8 text-[0.95rem]">Free forever. No credit card needed.</p>
 

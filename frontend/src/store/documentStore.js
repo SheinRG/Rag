@@ -54,6 +54,19 @@ const useDocumentStore = create((set, get) => ({
     }
   },
 
+  renameDocument: async (docId, newName) => {
+    try {
+      const { data } = await api.patch(`/documents/${docId}/rename`, { name: newName });
+      set((state) => ({
+        documents: state.documents.map((d) =>
+          d.id === docId ? { ...d, original_name: data.original_name } : d
+        ),
+      }));
+    } catch (err) {
+      set({ error: err.message });
+    }
+  },
+
   pollDocumentStatus: async (docId) => {
     try {
       const { data } = await api.get(`/documents/${docId}/status`);

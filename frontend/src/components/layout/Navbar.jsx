@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../../store/authStore';
 
 export default function Navbar() {
@@ -7,6 +8,9 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('product');
+  const [hoveredSection, setHoveredSection] = useState(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,61 +22,145 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
   };
 
+  const navLinks = [
+    { id: 'product', label: 'Product', type: 'anchor', href: '#product' },
+    { id: 'features', label: 'Features', type: 'anchor', href: '#features' },
+    ...(user ? [{ id: 'dashboard', label: 'Dashboard', type: 'link', to: '/dashboard' }] : []),
+  ];
+
   return (
     <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 font-sans" style={{ fontFamily: '"Inter", "system-ui", sans-serif' }}>
       <div 
-        className={`rounded-[999px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center justify-between w-full max-w-[1000px] px-8 py-3 transition-all duration-300 ease-in-out ${
-          isScrolled ? 'bg-white/70 backdrop-blur-lg' : 'bg-white'
+        className={`rounded-[999px] flex items-center justify-between w-full max-w-[1020px] px-8 py-3 transition-all duration-500 ease-in-out border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07),inset_0_0_0_1px_rgba(255,255,255,0.4)] backdrop-blur-2xl backdrop-saturate-[180%] ${
+          isScrolled ? 'bg-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]' : 'bg-white/30'
         }`}
       >
         {/* Logo */}
-        <Link to={user ? '/dashboard' : '/'} className="text-[#111827] no-underline focus:outline-none">
-           <span className="font-extrabold text-[1.3rem] tracking-tighter text-black">DocMind AI</span>
-        </Link>
+        <div className="flex-1">
+          <Link to={user ? '/dashboard' : '/'} className="text-[#111827] no-underline focus:outline-none">
+             <span className="font-extrabold text-[1.3rem] tracking-tighter text-black">DocMind AI</span>
+          </Link>
+        </div>
         
         {/* Center Links */}
-        <div className="hidden md:flex items-center gap-8 -ml-8">
-           <div className="flex flex-col items-center">
-             <a 
-               href="#product" 
-               onClick={() => setActiveSection('product')}
-               className={`font-semibold text-[0.95rem] transition-colors pb-1 border-b-2 hover:opacity-75 ${
-                 activeSection === 'product' ? 'text-black border-black' : 'text-gray-400 border-transparent hover:text-black'
-               }`}
-             >
-               Product
-             </a>
-           </div>
-           <div className="flex flex-col items-center">
-             <a 
-               href="#features" 
-               onClick={() => setActiveSection('features')}
-               className={`font-semibold text-[0.95rem] transition-colors pb-1 border-b-2 hover:opacity-75 ${
-                 activeSection === 'features' ? 'text-black border-black' : 'text-gray-400 border-transparent hover:text-black'
-               }`}
-             >
-               Features
-             </a>
-           </div>
+        <div 
+          className="hidden md:flex items-center gap-1"
+          onMouseLeave={() => setHoveredSection(null)}
+        >
+          {navLinks.map((link) => {
+            const isActive = activeSection === link.id;
+            const isHovered = hoveredSection === link.id;
+            
+            const content = (
+              <>
+                <span className="relative z-10">{link.label}</span>
+                {(isHovered || (isActive && !hoveredSection)) && (
+                  <motion.div
+                    layoutId="navbar-pill"
+                    className="absolute inset-0 bg-gray-200/90 rounded-full z-0"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </>
+            );
+
+            const baseClass = `relative px-5 py-2 rounded-full font-semibold text-[0.95rem] transition-colors duration-300 no-underline ${
+              isActive || isHovered ? 'text-black' : 'text-gray-500'
+            }`;
+
+            if (link.type === 'anchor') {
+              return (
+                <a
+                  key={link.id}
+                  href={link.href}
+                  onMouseEnter={() => setHoveredSection(link.id)}
+                  onClick={() => setActiveSection(link.id)}
+                  className={baseClass}
+                >
+                  {content}
+                </a>
+              );
+            }
+
+            return (
+              <Link
+                key={link.id}
+                to={link.to}
+                onMouseEnter={() => setHoveredSection(link.id)}
+                onClick={() => setActiveSection(link.id)}
+                className={baseClass}
+              >
+                {content}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Right CTA */}
-        <div className="flex items-center gap-6">
+        <div className="flex-1 flex items-center justify-end gap-6">
           {user ? (
-            <>
-              <span className="hidden sm:inline-block text-sm text-gray-500 font-semibold">{user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="px-6 py-2.5 rounded-full bg-black text-white font-semibold text-[0.9rem] hover:bg-gray-800 transition-colors"
+            <div className="relative" ref={dropdownRef}>
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none hover:scale-105 active:scale-95 shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-white/80 ${
+                  isProfileOpen ? 'bg-white/60 scale-105' : 'bg-white/40 backdrop-blur-xl'
+                }`}
+                aria-label="User Profile"
               >
-                Log out
+                <div className="w-full h-full rounded-full flex items-center justify-center bg-gradient-to-tr from-[#0ea5e9]/10 to-[#38bdf8]/10 group">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px] text-[#0ea5e9] opacity-80">
+                    <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+                  </svg>
+                </div>
               </button>
-            </>
+
+              <AnimatePresence>
+                {isProfileOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 400, 
+                      damping: 30 
+                    }}
+                    style={{ transformOrigin: 'top right' }} 
+                    className="absolute -right-2 mt-5 w-56 bg-white/40 backdrop-blur-2xl backdrop-saturate-[180%] border border-white/40 rounded-[24px] shadow-[0_8px_32px_0_rgba(31,38,135,0.07),inset_0_0_0_1px_rgba(255,255,255,0.4)] py-2 z-50 flex flex-col overflow-hidden"
+                  >
+                    <div className="px-5 py-3 border-b border-gray-200/40 mb-1">
+                      <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Signed in as</p>
+                      <p className="text-[0.9rem] text-gray-900 font-semibold truncate">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full text-left px-5 py-2.5 text-[0.9rem] font-bold text-red-600 hover:bg-red-50/50 transition-colors duration-200"
+                    >
+                      Log out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <>
               <Link to="/login" className="hidden sm:inline-block text-black font-bold text-[0.95rem] no-underline hover:text-gray-600 transition-colors">Log In</Link>

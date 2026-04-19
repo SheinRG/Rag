@@ -53,52 +53,63 @@ export default function DocumentOverview({ document }) {
   if (!overview) return null;
 
   return (
-    <div style={{ padding: '0.75rem 1.25rem', maxHeight: '250px', overflow: 'auto' }}>
+    <div style={{ padding: '1.5rem 0' }}>
       {/* Summary */}
-      <p style={{
-        fontSize: '0.78rem', lineHeight: 1.6,
-        color: 'var(--color-text-secondary)',
-        marginBottom: '0.75rem',
-      }}>
-        {overview.summary}
-      </p>
+      <div style={{ marginBottom: '2rem' }}>
+        <p style={{
+          fontSize: '1.1rem', lineHeight: 1.8,
+          color: 'var(--color-text)',
+          marginBottom: '1rem',
+          fontWeight: 400
+        }}>
+          {overview.summary}
+        </p>
+      </div>
 
       {/* Suggestion Prompts */}
       {overview.suggestions && overview.suggestions.length > 0 && (
         <div>
           <p style={{
-            fontSize: '0.7rem', fontWeight: 700,
+            fontSize: '0.85rem', fontWeight: 400,
             color: 'var(--color-text-muted)',
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: '0.5rem',
+            letterSpacing: '0.1em',
+            marginBottom: '1rem',
+            textAlign: 'center'
           }}>
             Suggested questions
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
             {overview.suggestions.map((suggestion, i) => (
               <motion.button
                 key={i}
-                whileHover={{ scale: 1.01, x: 4 }}
+                whileHover={{ scale: 1.02, y: -2, backgroundColor: 'white' }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => sendMessage(suggestion)}
                 style={{
-                  padding: '0.5rem 0.65rem',
-                  borderRadius: '8px',
+                  padding: '1rem 1.25rem',
+                  borderRadius: '16px',
                   border: '1px solid var(--color-border)',
-                  background: 'var(--color-surface-secondary)',
+                  background: 'rgba(255, 255, 255, 0.4)',
                   color: 'var(--color-text)',
-                  fontSize: '0.75rem',
+                  fontSize: '0.9rem',
                   textAlign: 'left',
                   cursor: 'pointer',
-                  lineHeight: 1.4,
+                  lineHeight: 1.5,
                   fontFamily: 'inherit',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: '0.75rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                  transition: 'background-color 0.2s ease'
                 }}
               >
-                <span style={{ color: 'var(--color-primary-500)', flexShrink: 0 }}>→</span>
+                <div style={{ 
+                  width: '24px', height: '24px', borderRadius: '50%', 
+                  background: 'var(--color-primary-100)', color: 'var(--color-primary-600)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1rem', flexShrink: 0
+                }}>→</div>
                 {suggestion}
               </motion.button>
             ))}

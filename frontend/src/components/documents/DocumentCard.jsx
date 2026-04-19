@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import useDocumentStore from '../../store/documentStore';
 import useChatStore from '../../store/chatStore';
@@ -9,7 +9,43 @@ const statusColors = {
   failed: { bg: 'var(--color-error-light)', color: 'var(--color-error)', label: 'Failed' },
 };
 
-const typeIcons = { pdf: '📕', txt: '📄', md: '📝' };
+const typeIcons = {
+  pdf: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <path d="M10 18v-4"></path>
+      <path d="M14 18v-4"></path>
+      <path d="M10 14h4"></path>
+    </svg>
+  ),
+  txt: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="16" y1="13" x2="8" y2="13"></line>
+      <line x1="16" y1="17" x2="8" y2="17"></line>
+      <line x1="10" y1="9" x2="8" y2="9"></line>
+    </svg>
+  ),
+  md: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <path d="M8 15V9l2.5 4L13 9v6"></path>
+      <path d="M16 11v4"></path>
+      <path d="M16 11l-2 2"></path>
+      <path d="M16 11l2 2"></path>
+    </svg>
+  )
+};
+
+const defaultIcon = (
+   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+   </svg>
+);
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -20,8 +56,24 @@ function formatSize(bytes) {
 export default function DocumentCard({ doc, onDelete }) {
   const st = statusColors[doc.status] || statusColors.processing;
   const pollStatus = useDocumentStore((state) => state.pollDocumentStatus);
+  const renameDocument = useDocumentStore((state) => state.renameDocument);
   const { activeDocumentId, setActiveDocument } = useChatStore();
-  const isActive = activeDocumentId === doc.id;
+  const isSelected = activeDocumentId === doc.id;
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(doc.original_name);
+  const [isHovered, setIsHovered] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     let intervalId;
@@ -35,32 +87,44 @@ export default function DocumentCard({ doc, onDelete }) {
     };
   }, [doc.status, doc.id, pollStatus]);
 
-  return (
+  const handleRename = async () => {
+    if (editName.trim() && editName !== doc.original_name) {
+      await renameDocument(doc.id, editName.trim());
+    }
+    setIsEditing(false);
+    setShowMenu(false);
+  };
+
+return (
     <motion.div
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       onClick={() => doc.status === 'ready' && setActiveDocument(doc.id)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: isActive ? 'var(--color-badge-bg)' : 'var(--color-card-bg)',
+        background: isSelected ? 'var(--color-badge-bg)' : 'var(--color-card-bg)',
         borderRadius: '10px',
         padding: '0.75rem',
-        border: `1px solid ${isActive ? 'var(--color-primary-400)' : 'var(--color-border)'}`,
+        border: `1px solid ${isSelected ? 'var(--color-primary-400)' : 'var(--color-border)'}`,
         display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
         cursor: doc.status === 'ready' ? 'pointer' : 'default',
       }}
     >
-      <span style={{ fontSize: '1.25rem' }}>{typeIcons[doc.file_type] || '📄'}</span>
+      <span className="flex-shrink-0 flex items-center justify-center text-gray-400 mt-0.5">
+        {typeIcons[doc.file_type] || defaultIcon}
+      </span>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontWeight: 600, fontSize: '0.82rem', color: 'var(--color-text)',
+          fontWeight: 400, fontSize: '0.82rem', color: 'var(--color-text)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           margin: 0,
         }}>{doc.original_name}</p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
           <span style={{
-            fontSize: '0.65rem', fontWeight: 600,
+            fontSize: '0.65rem', fontWeight: 400,
             padding: '0.1rem 0.4rem', borderRadius: '5px',
             background: st.bg, color: st.color,
           }}>{st.label}</span>
@@ -71,18 +135,70 @@ export default function DocumentCard({ doc, onDelete }) {
         </div>
       </div>
 
-      <motion.button
-        whileHover={{ scale: 1.2 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={(e) => { e.stopPropagation(); onDelete(doc.id); }}
-        title="Delete document"
-        style={{
-          border: 'none', background: 'none', cursor: 'pointer',
-          color: 'var(--color-text-muted)', fontSize: '0.85rem', padding: '0.15rem',
-        }}
-      >
-        🗑️
-      </motion.button>
+      <div className="relative" ref={menuRef}>
+        {showMenu && !isEditing && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="absolute right-0 top-6 z-50 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden min-w-[140px]"
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-card-hover)] flex items-center gap-2"
+              style={{ color: 'var(--color-text)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+              </svg>
+              Rename
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(doc.id); }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-card-hover)] flex items-center gap-2"
+              style={{ color: 'var(--color-error)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              </svg>
+              Delete
+            </button>
+          </motion.div>
+        )}
+
+        {isEditing ? (
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+              onBlur={handleRename}
+              autoFocus
+              className="w-24 px-1 py-0.5 text-xs rounded border border-[var(--color-primary-400)] bg-[var(--color-input-bg)] outline-none"
+              style={{ color: 'var(--color-text)' }}
+            />
+          </div>
+        ) : isHovered || showMenu ? (
+          <motion.button
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+            title="More options"
+            style={{
+              border: 'none', background: 'none', cursor: 'pointer',
+              color: 'var(--color-text-muted)', fontSize: '0.85rem', padding: '0.15rem',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="2"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+              <circle cx="12" cy="19" r="2"></circle>
+            </svg>
+          </motion.button>
+        ) : null}
+      </div>
     </motion.div>
   );
 }

@@ -1,14 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useDocumentStore from '../../store/documentStore';
 import useChatStore from '../../store/chatStore';
 import DocumentCard from './DocumentCard';
-import UploadZone from './UploadZone';
 import DocumentOverview from './DocumentOverview';
+import AddSourceModal from './AddSourceModal';
+import SpotlightCard from '../ui/SpotlightCard';
 
-export default function DocumentSidebar() {
+export default function DocumentSidebar({ isOpen, onToggle, onWebSearch }) {
   const { documents, fetchDocuments, deleteDocument, loading } = useDocumentStore();
-  const { activeDocumentId } = useChatStore();
+  const { activeDocumentId, setActiveDocument } = useChatStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [webSearchQuery, setWebSearchQuery] = useState('');
 
   useEffect(() => {
     fetchDocuments();
@@ -16,40 +19,167 @@ export default function DocumentSidebar() {
     return () => clearInterval(interval);
   }, [fetchDocuments]);
 
-  // Find the active document for overview
   const activeDoc = documents.find(d => d.id === activeDocumentId);
 
+  // ─── Collapsed Icon Bar ───
+  if (!isOpen) {
+    return (
+      <div className="w-full h-full flex flex-col items-center bg-white/60 backdrop-blur-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[20px] overflow-hidden py-4">
+        {/* Toggle button */}
+        <button
+          onClick={onToggle}
+          className="w-full py-2 flex items-center justify-center text-gray-500 hover:text-black hover:bg-gray-100/50 transition-all duration-200"
+          title="Open Sources"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+          </svg>
+        </button>
+
+        {/* Divider */}
+        <div className="w-6 h-px bg-gray-200/60 my-2"></div>
+
+        {/* Search shortcut instead of number */}
+        <button
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-black hover:bg-gray-100 transition-all duration-200"
+          title="Search the web"
+          onClick={onToggle}
+        >
+          <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+
+        {/* Document type indicators */}
+        <div className="flex-1 flex flex-col items-center gap-3 mt-4 px-1 overflow-auto no-scrollbar">
+          {documents.map((doc) => (
+            <div 
+              key={doc.id}
+              onClick={() => setActiveDocument(doc.id)}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs transition-all duration-200 cursor-pointer shadow-sm ${
+                activeDocumentId === doc.id 
+                  ? 'bg-black text-white scale-110 shadow-md' 
+                  : 'bg-white/80 text-gray-400 hover:bg-white hover:text-black'
+              }`}
+              title={doc.original_name}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                 <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+          ))}
+        </div>
+
+        {/* Add source shortcut */}
+        <button
+          className="mt-auto w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all duration-200"
+          title="Add Source"
+          onClick={() => { onToggle(); setTimeout(() => setIsModalOpen(true), 200); }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Full Open Panel ───
   return (
-    <div className="w-full flex flex-col h-full bg-white/60 backdrop-blur-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[32px] overflow-hidden">
-      <div style={{
-        padding: '1rem 1.25rem', borderBottom: '1px solid var(--color-border)',
-        fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-text)',
-      }}>
-        📁 Sources
+    <div className="w-full flex flex-col h-full bg-white/60 backdrop-blur-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[24px] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/60">
+        <span className="font-bold text-[1rem] text-gray-900 tracking-tight">Sources</span>
+        <button
+          onClick={onToggle}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-black hover:bg-gray-100/60 transition-all duration-200"
+          title="Close Sources"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-[18px] h-[18px]">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+          </svg>
+        </button>
       </div>
 
-      <div style={{ padding: '0.75rem 1rem' }}>
-        <UploadZone />
+      {/* Search Header Area */}
+      <div className="px-4 mt-3">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="w-full py-2.5 bg-white border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-[20px] text-gray-700 text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Add sources
+        </button>
+      </div>
+
+      <div className="px-3 mt-4 mb-3">
+        <SpotlightCard className="p-1" hasAurora>
+          <form
+            onSubmit={(e) => { 
+                e.preventDefault(); 
+                if (webSearchQuery.trim()) {
+                    onWebSearch(webSearchQuery.trim()); 
+                    setWebSearchQuery('');
+                }
+            }}
+            className="flex flex-col pt-1 pl-1 pr-1 text-gray-700"
+          >
+             <div className="flex items-end gap-1.5">
+                <div className="flex-1 min-h-[40px] flex items-center">
+                    <textarea
+                        value={webSearchQuery}
+                        onChange={(e) => {
+                            const target = e.target;
+                            target.style.height = 'inherit';
+                            target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+                            setWebSearchQuery(target.value);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                if (webSearchQuery.trim()) {
+                                    onWebSearch(webSearchQuery.trim());
+                                    setWebSearchQuery('');
+                                }
+                            }
+                        }}
+                        rows="1"
+                        placeholder="Search the web for"
+                        className="w-full bg-transparent border-none outline-none text-[13px] placeholder-gray-500 py-2.5 px-2 resize-none leading-relaxed"
+                        style={{ height: '40px' }}
+                    />
+                </div>
+                <div className="pb-1.5 pr-1">
+                    <button type="submit" disabled={!webSearchQuery.trim()} className="w-7 h-7 shrink-0 rounded-full bg-[#f1f5f9] hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </button>
+                </div>
+             </div>
+          </form>
+        </SpotlightCard>
       </div>
 
       {/* Document List */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '0 1rem 1rem' }}>
+      <div className="flex-1 overflow-auto px-3 pb-3">
         {loading && documents.length === 0 ? (
-          <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem 0', fontSize: '0.9rem' }}>
+          <p className="text-center text-gray-400 py-8 text-sm">
             Loading documents...
           </p>
         ) : documents.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem 0.5rem' }}>
-            <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.75rem' }}>📄</span>
-            <p style={{ fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.25rem', fontSize: '0.9rem' }}>
+          <div className="text-center py-8 px-2">
+            <span className="text-3xl block mb-3">📄</span>
+            <p className="font-semibold text-gray-500 text-sm mb-1">
               Saved sources will appear here
             </p>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', lineHeight: 1.5 }}>
-              Upload PDFs, text, or Markdown files to begin exploring with AI.
+            <p className="text-gray-400 text-xs leading-relaxed">
+              Click Add source above to add PDFs, websites, text, videos or audio files.
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="flex flex-col gap-2">
             <AnimatePresence>
               {documents.map((doc, i) => (
                 <motion.div
@@ -67,23 +197,9 @@ export default function DocumentSidebar() {
         )}
       </div>
 
-      {/* Document Overview Panel (shown when a document is selected and ready) */}
-      <AnimatePresence>
-        {activeDoc && activeDoc.status === 'ready' && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              borderTop: '1px solid var(--color-border)',
-              overflow: 'hidden',
-            }}
-          >
-            <DocumentOverview document={activeDoc} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Document Overview Panel removed - now in chat panel */}
+
+      <AddSourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }
