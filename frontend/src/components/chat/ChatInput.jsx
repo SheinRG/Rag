@@ -32,7 +32,7 @@ export default function ChatInput({ onSend, disabled }) {
         as="form"
         onSubmit={handleSubmit}
         containerClassName="max-w-4xl w-full pointer-events-auto rounded-[28px]"
-        className="w-full flex items-end bg-white/80 dark:bg-[#1a1a2e]/80 backdrop-blur-xl focus-within:bg-white/90 transition-all p-1"
+        className="w-full flex items-end bg-white/80 backdrop-blur-xl focus-within:bg-white/90 transition-all p-1"
       >
         <textarea
           rows="1"

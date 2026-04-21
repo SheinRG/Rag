@@ -1,4 +1,5 @@
 @import "tailwindcss";
+:root { color-scheme: light !important; }
 
 /* ─── Light Theme Design Tokens ─── */
 @theme inline {

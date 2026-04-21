@@ -38,10 +38,10 @@ export default function AddSourceModal({ isOpen, onClose, notebookId }) {
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],
       'text/markdown': ['.md'],
+      'text/csv': ['.csv'],
     },
     maxSize: 20 * 1024 * 1024,
     disabled: uploading,
-    noClick: true,
   });
 
   const handleYoutubeSubmit = async () => {

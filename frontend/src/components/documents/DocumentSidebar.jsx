@@ -143,7 +143,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
         <HoverBorderGradient
           as="div"
           containerClassName="w-full rounded-[24px]"
-          className="w-full bg-white/60 dark:bg-black/60 backdrop-blur-xl p-1"
+          className="w-full bg-white/60 backdrop-blur-xl p-1"
         >
           <form
             onSubmit={(e) => { 

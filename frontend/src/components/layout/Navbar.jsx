@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../../store/authStore';
+const MotionLink = motion(Link);
 
 export default function Navbar() {
   const { user, logout } = useAuthStore();
@@ -84,7 +85,14 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 font-sans" style={{ fontFamily: '"Inter", "system-ui", sans-serif' }}>
-      <div 
+      <motion.div 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ 
+          duration: 1.2,
+          ease: "easeOut",
+          delay: 0.2
+        }}
         className={`rounded-[999px] flex items-center justify-between w-full max-w-[1020px] px-8 py-3 transition-all duration-500 ease-in-out border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07),inset_0_0_0_1px_rgba(255,255,255,0.4)] backdrop-blur-2xl backdrop-saturate-[180%] ${
           isScrolled ? 'bg-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]' : 'bg-white/30'
         }`}
@@ -220,8 +228,10 @@ export default function Navbar() {
                   />
                 )}
               </div>
-              <Link 
+              <MotionLink 
                 to="/signup" 
+                whileHover={{ scale: 1.05, y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 className="ml-2 px-6 py-[0.65rem] text-white rounded-[999px] font-bold text-[0.9rem] no-underline transition-all relative overflow-hidden group shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
                 style={{
                   background: 'rgba(17,17,17,0.9)',
@@ -234,11 +244,11 @@ export default function Navbar() {
                 {/* Glossy highlight layer */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full transition-transform duration-700 group-hover:translate-x-full" />
                 Get Started
-              </Link>
+              </MotionLink>
             </>
           )}
         </div>
-      </div>
+      </motion.div>
     </nav>
   );
 }
