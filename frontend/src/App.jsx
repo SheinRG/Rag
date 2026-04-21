@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import useAuthStore from './store/authStore';
-import useThemeStore from './store/themeStore';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -11,13 +10,11 @@ import NotebooksPage from './pages/NotebooksPage';
 
 export default function App() {
   const loadFromStorage = useAuthStore((s) => s.loadFromStorage);
-  const hydrate = useThemeStore((s) => s.hydrate);
 
-  // Restore session and theme from localStorage on mount
+  // Restore session from localStorage on mount
   useEffect(() => {
     loadFromStorage();
-    hydrate();
-  }, [loadFromStorage, hydrate]);
+  }, [loadFromStorage]);
 
   return (
     <BrowserRouter>

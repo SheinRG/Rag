@@ -82,6 +82,8 @@ async def list_notebooks(user=Depends(get_current_user)):
         return notebooks
     except Exception as e:
         logger.warning(f"Failed to list notebooks (table may not exist yet): {e}")
+        with open("notebook_error_log.txt", "w", encoding="utf-8") as f:
+            f.write(str(e))
         # Return empty list instead of 500 if table doesn't exist
         return []
 

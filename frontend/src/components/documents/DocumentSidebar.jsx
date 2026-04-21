@@ -7,11 +7,13 @@ import DocumentOverview from './DocumentOverview';
 import AddSourceModal from './AddSourceModal';
 import SpotlightCard from '../ui/SpotlightCard';
 import { HoverBorderGradient } from '../ui/HoverBorderGradient';
+import ConnectorsModal from './ConnectorsModal';
 
 export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, notebookId }) {
   const { documents, fetchDocuments, deleteDocument, loading } = useDocumentStore();
   const { activeDocumentId, setActiveDocument } = useChatStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConnectorsOpen, setIsConnectorsOpen] = useState(false);
   const [webSearchQuery, setWebSearchQuery] = useState('');
 
   useEffect(() => {
@@ -74,9 +76,18 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
           ))}
         </div>
 
+        {/* Connectors shortcut */}
+        <button
+          className="mt-2 w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all duration-200"
+          title="Connectors"
+          onClick={() => setIsConnectorsOpen(true)}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+        </button>
+
         {/* Add source shortcut */}
         <button
-          className="mt-auto w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all duration-200"
+          className="mt-2 w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all duration-200"
           title="Add Source"
           onClick={() => { onToggle(); setTimeout(() => setIsModalOpen(true), 200); }}
         >
@@ -115,6 +126,16 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
             <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Add sources
+        </button>
+      </div>
+
+      <div className="px-4 mt-2">
+        <button 
+          onClick={() => setIsConnectorsOpen(true)}
+          className="w-full py-2 bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.01)] rounded-[16px] text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 text-gray-500 transition-colors"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+          Connectors
         </button>
       </div>
 
@@ -207,6 +228,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
       {/* Document Overview Panel removed - now in chat panel */}
 
       <AddSourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} notebookId={notebookId} />
+      <ConnectorsModal isOpen={isConnectorsOpen} onClose={() => setIsConnectorsOpen(false)} />
     </div>
   );
 }

@@ -17,9 +17,47 @@ export default function Navbar() {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
-    // Call once to set initial state
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '-40% 0px -50% 0px', // Detects sections when they enter the upper-middle of the screen
+      threshold: 0
+    };
+
+    const observerCallback = (entries) => {
+      // Find the first entry that is intersecting
+      // In case multiple are (unlikely with narrow margin), the last one wins or we can find the most intersecting
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    const sections = ['product', 'how-it-works', 'features'];
+    
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    // Fallback: If we're at the very top, always show 'product' as active
+    const handleScrollFallback = () => {
+      if (window.scrollY < 100) {
+        setActiveSection('product');
+      }
+    };
+    window.addEventListener('scroll', handleScrollFallback);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScrollFallback);
+    };
   }, []);
 
   // Handle click outside to close dropdown

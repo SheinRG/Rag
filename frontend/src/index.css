@@ -42,50 +42,6 @@
   --color-badge-text: #0369a1;
 }
 
-/* ─── Dark Theme ─── */
-html.dark {
-  --color-primary-50: #1e1b4b;
-  --color-primary-100: #312e81;
-  --color-primary-200: #3730A3;
-  --color-primary-300: #4338CA;
-  --color-primary-400: #6366F1;
-  --color-primary-500: #818CF8;
-  --color-primary-600: #6366F1;
-  --color-primary-700: #A5B4FC;
-  --color-primary-800: #C7D2FE;
-  --color-primary-900: #E0E7FF;
-
-  --color-surface: #1a1a2e;
-  --color-surface-secondary: #16213e;
-  --color-background: #0f0f1a;
-  --color-border: #2a2a3e;
-  --color-text: #e4e4ec;
-  --color-text-secondary: #9ca3b0;
-  --color-text-muted: #6b7280;
-
-  --color-success: #34d399;
-  --color-success-light: #064e3b;
-  --color-warning: #fbbf24;
-  --color-warning-light: #78350f;
-  --color-error: #f87171;
-  --color-error-light: #7f1d1d;
-
-  --color-card-bg: #1a1a2e;
-  --color-card-hover: #22223a;
-  --color-modal-overlay: rgba(0, 0, 0, 0.7);
-  --color-input-bg: #1a1a2e;
-  --color-navbar-bg: rgba(15, 15, 26, 0.85);
-  --color-sidebar-bg: #1a1a2e;
-  --color-chat-bg: #0f0f1a;
-  --color-user-bubble: #4F46E5;
-  --color-ai-bubble: #1a1a2e;
-  --color-studio-bg: #1a1a2e;
-  --color-badge-bg: #312e81;
-  --color-badge-text: #A5B4FC;
-
-  color-scheme: dark;
-}
-
 /* ─── Base ─── */
 html {
   scroll-behavior: smooth;

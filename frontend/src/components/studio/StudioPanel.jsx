@@ -6,6 +6,7 @@ import QuizModal from './QuizModal';
 import SummaryModal from './SummaryModal';
 import FlashcardsModal from './FlashcardsModal';
 import MindMapModal from './MindMapModal';
+import ResearchReportModal from './ResearchReportModal';
 
 const studioFeatures = [
   {
@@ -75,6 +76,19 @@ const studioFeatures = [
     color: '#F5F3FF',
     textColor: '#8B5CF6'
   },
+  {
+    id: 'research',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+        <path d="M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <path d="M9 14l2 2 4-4" />
+      </svg>
+    ),
+    title: 'Research Report',
+    color: '#EDE9FE',
+    textColor: '#7C3AED'
+  },
 ];
 
 export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
@@ -84,6 +98,12 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
 
   const handleFeatureClick = async (feature) => {
     if (feature.comingSoon) return;
+
+    // Research report opens its own modal directly
+    if (feature.id === 'research') {
+      setActiveModal('research');
+      return;
+    }
 
     setLoadingFeature(feature.id);
     try {
@@ -114,6 +134,9 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
         )}
         {activeModal === 'mindmap' && modalData && (
           <MindMapModal data={modalData} onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'research' && (
+          <ResearchReportModal onClose={() => setActiveModal(null)} activeDocumentId={activeDocumentId} />
         )}
       </AnimatePresence>,
       document.body
@@ -162,7 +185,6 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
             </motion.button>
           ))}
         </div>
-        {renderModals()}
       </div>
     );
   }

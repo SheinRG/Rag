@@ -37,6 +37,18 @@ const typeIcons = {
       <path d="M16 11l-2 2"></path>
       <path d="M16 11l2 2"></path>
     </svg>
+  ),
+  youtube: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400">
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    </svg>
+  ),
+  image: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+      <polyline points="21 15 16 10 5 21"></polyline>
+    </svg>
   )
 };
 
@@ -57,6 +69,8 @@ const typeStyles = {
   pdf: { color: 'text-rose-500', bg: 'bg-rose-50/50', border: 'border-rose-100/50' },
   txt: { color: 'text-blue-500', bg: 'bg-blue-50/50', border: 'border-blue-100/50' },
   md: { color: 'text-emerald-500', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50' },
+  youtube: { color: 'text-red-500', bg: 'bg-red-50/50', border: 'border-red-100/50' },
+  image: { color: 'text-cyan-500', bg: 'bg-cyan-50/50', border: 'border-cyan-100/50' },
 };
 
 export default function DocumentCard({ doc, onDelete }) {
