@@ -1,6 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import reactGoogleDrivePicker from 'react-google-drive-picker';
+const useDrivePicker = typeof reactGoogleDrivePicker === 'function' ? reactGoogleDrivePicker : reactGoogleDrivePicker.default;
+import api from '../../api/client';
 
 const CONNECTORS = [
   {
@@ -44,16 +47,58 @@ const CONNECTORS = [
 ];
 
 export default function ConnectorsModal({ isOpen, onClose }) {
+  const [openPicker, authResponse] = useDrivePicker();
+  const [isProcessing, setIsProcessing] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleOpenPicker = () => {
+    openPicker({
+      clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      developerKey: import.meta.env.VITE_GOOGLE_API_KEY,
+      viewId: "DOCS",
+      showUploadView: true,
+      showUploadFolders: true,
+      supportDrives: true,
+      multiselect: false,
+      callbackFunction: async (data) => {
+        if (data.action === 'picked') {
+          setIsProcessing(true);
+          try {
+            const file = data.docs[0];
+            const token = window.gapi?.client?.getToken()?.access_token || authResponse?.access_token;
+            
+            if (!token) {
+               throw new Error("Could not retrieve access token.");
+            }
+
+            await api.post('/media/drive', {
+               file_id: file.id,
+               access_token: token,
+               file_name: file.name,
+               mime_type: file.mimeType,
+               notebook_id: null
+            });
+            onClose();
+          } catch (error) {
+            console.error("Drive upload failed:", error);
+            alert("Failed to ingest file from Google Drive.");
+          } finally {
+            setIsProcessing(false);
+          }
+        }
+      },
+    });
+  };
 
   return createPortal(
     <AnimatePresence>
       <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="w-full max-w-xl bg-white/95 backdrop-blur-2xl border border-white rounded-[32px] shadow-2xl p-8 relative overflow-hidden"
+           initial={{ opacity: 0, scale: 0.95 }}
+           animate={{ opacity: 1, scale: 1 }}
+           exit={{ opacity: 0, scale: 0.95 }}
+           className="w-full max-w-xl bg-white/95 backdrop-blur-2xl border border-white rounded-[32px] shadow-2xl p-8 relative overflow-hidden"
         >
           <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-full transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -61,14 +106,19 @@ export default function ConnectorsModal({ isOpen, onClose }) {
 
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Connectors</h2>
           <p className="text-sm text-gray-500 mb-8">
-            Integrate DocMind with your existing tools to automatically sync and index knowledge.
+            {isProcessing ? "Processing your secure import..." : "Integrate DocMind with your existing tools to automatically sync and index knowledge."}
           </p>
 
           <div className="space-y-4">
             {CONNECTORS.map((connector) => (
               <div
                 key={connector.id}
-                className="flex items-center gap-5 p-5 rounded-[24px] border bg-gray-50 border-gray-100 hover:bg-white hover:border-gray-200 transition-all"
+                onClick={connector.id === 'gdrive' && !isProcessing ? handleOpenPicker : undefined}
+                className={`flex items-center gap-5 p-5 rounded-[24px] border bg-gray-50 border-gray-100 transition-all ${
+                  connector.id === 'gdrive' && !isProcessing
+                    ? 'cursor-pointer hover:bg-white hover:border-blue-200 hover:shadow-md'
+                    : 'opacity-70'
+                }`}
               >
                 <div className="p-3 bg-white shadow-sm rounded-2xl">
                   {connector.icon}
@@ -77,7 +127,7 @@ export default function ConnectorsModal({ isOpen, onClose }) {
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="font-semibold text-gray-900">{connector.name}</h3>
                     <span className="text-[0.65rem] font-bold uppercase tracking-widest px-2 py-0.5 bg-gray-200 text-gray-500 rounded-full">
-                      {connector.status}
+                      {connector.id === 'gdrive' ? 'Ready' : connector.status}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 leading-relaxed">

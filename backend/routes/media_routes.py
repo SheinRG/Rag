@@ -8,6 +8,8 @@ import json
 import uuid
 import logging
 import base64
+import httpx
+import mimetypes
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Form, status
@@ -16,6 +18,7 @@ from pydantic import BaseModel
 from auth_middleware import get_current_user
 from database import supabase, embedder
 from config import GROQ_API_KEY, CHUNK_SIZE, CHUNK_OVERLAP
+from ingest import run_ingestion
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from groq import Groq
 
@@ -464,3 +467,87 @@ Do NOT include the section title as a header—it will be added automatically.""
             "Connection": "keep-alive",
         },
     )
+
+# ─── Google Drive Integration ───
+
+class DriveRequest(BaseModel):
+    file_id: str
+    access_token: str
+    file_name: str
+    mime_type: Optional[str] = None
+    notebook_id: Optional[str] = None
+
+@router.post("/drive")
+async def ingest_drive(
+    body: DriveRequest,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_current_user),
+):
+    """Download a file from Google Drive and ingest."""
+    headers = {"Authorization": f"Bearer {body.access_token}"}
+    
+    is_google_workspace = body.mime_type and body.mime_type.startswith("application/vnd.google-apps")
+    target_ext = ".pdf"
+    
+    if is_google_workspace:
+        if "document" in body.mime_type or "presentation" in body.mime_type:
+            url = f"https://www.googleapis.com/drive/v3/files/{body.file_id}/export?mimeType=application/pdf"
+        elif "spreadsheet" in body.mime_type:
+            url = f"https://www.googleapis.com/drive/v3/files/{body.file_id}/export?mimeType=text/csv"
+            target_ext = ".csv"
+        else:
+            raise HTTPException(400, "Unsupported Google Workspace file format.")
+    else:
+        url = f"https://www.googleapis.com/drive/v3/files/{body.file_id}?alt=media"
+        target_ext = "." + body.file_name.rsplit(".", 1)[-1] if "." in body.file_name else ".pdf"
+
+    try:
+        with httpx.Client() as client:
+            resp = client.get(url, headers=headers, timeout=60.0)
+            resp.raise_for_status()
+            content = resp.content
+    except Exception as e:
+        logger.error(f"Google Drive download failed: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to download file from Google Drive.")
+
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File exceeds 20MB limit.")
+
+    file_size = len(content)
+    clean_filename = body.file_name.rsplit(".", 1)[0] + target_ext
+    storage_path = f"{user.id}/{uuid.uuid4()}_{clean_filename}"
+
+    try:
+        mime = mimetypes.guess_type(clean_filename)[0] or "application/octet-stream"
+        supabase.storage.from_("documents").upload(
+            storage_path,
+            content,
+            {"content-type": mime}
+        )
+    except Exception as e:
+        logger.error(f"Supabase upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Storage failed.")
+
+    doc_data = {
+        "user_id": str(user.id),
+        "filename": clean_filename,
+        "original_name": body.file_name,
+        "file_type": target_ext[1:],
+        "file_size": file_size,
+        "status": "processing",
+        "storage_path": storage_path,
+    }
+    if body.notebook_id:
+        doc_data["notebook_id"] = body.notebook_id
+
+    result = supabase.table("documents").insert(doc_data).execute()
+    doc_id = result.data[0]["id"]
+
+    background_tasks.add_task(
+        run_ingestion,
+        document_id=doc_id,
+        file_path=storage_path,
+        user_id=str(user.id)
+    )
+
+    return {"id": doc_id, "status": "processing", "original_name": body.file_name}

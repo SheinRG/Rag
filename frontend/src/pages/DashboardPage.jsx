@@ -74,7 +74,7 @@ export default function DashboardPage() {
       <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[60%] rounded-full bg-blue-500/15 blur-[160px] pointer-events-none z-0" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40%] h-[40%] rounded-full bg-indigo-400/10 blur-[140px] pointer-events-none z-0" />
 
-      {/* Floating Header Elements (Ultra Minimal) */}
+      ``    {/* Floating Header Elements (Ultra Minimal) */}
       {activeNotebook && (
         <>
           {/* Top Left: Notebook Title Only */}
@@ -95,7 +95,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, x: 0 }}
             className="absolute top-2 right-6 z-20 flex items-center"
           >
-            <button 
+            <button
               onClick={handleCreateNotebook}
               className="flex items-center gap-2 bg-black hover:bg-neutral-800 text-white px-4 py-[6px] rounded-full font-medium text-[0.85rem] transition-colors shadow-sm"
             >
@@ -155,4 +155,5 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+
 }
