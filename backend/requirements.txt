@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 supabase
 groq
-sentence-transformers
+fastembed
 langchain-text-splitters
 pypdf
 python-multipart
