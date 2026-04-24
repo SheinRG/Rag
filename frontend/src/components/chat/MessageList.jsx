@@ -2,9 +2,12 @@ import { useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 import DocumentOverview from '../documents/DocumentOverview';
 
-export default function MessageList({ messages, onReask, activeDoc, onSuggestionClick, onAddToNote, onEditMessage }) {
+export default function MessageList({ messages, onReask, activeDocs = [], onSuggestionClick, onAddToNote, onEditMessage }) {
   const prevLenRef = useRef(messages.length);
   const containerRef = useRef(null);
+
+  const activeDocCount = activeDocs.length;
+  const mainDoc = activeDocs[0];
 
   useEffect(() => {
     if (containerRef.current) {
@@ -28,18 +31,24 @@ export default function MessageList({ messages, onReask, activeDoc, onSuggestion
         alignItems: 'center', justifyContent: 'flex-start', color: 'var(--color-text-muted)',
         padding: '4rem 2rem 120px 2rem', minHeight: 0, overflowY: 'auto'
       }}>
-        {activeDoc ? (
+        {activeDocCount > 0 ? (
           <div style={{ width: '100%', maxWidth: '600px' }}>
             <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-               <h2 style={{ fontSize: '1.75rem', fontWeight: 400, color: 'var(--color-text)', marginBottom: '0.5rem' }}>
-                 {activeDoc.original_name}
+               <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: '#111', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
+                 {activeDocCount === 1 ? mainDoc.original_name : `${activeDocCount} Sources Selected`}
                </h2>
-               <div style={{ h: '2px', w: '40px', background: 'var(--color-primary-500)', margin: '0 auto' }}></div>
+               {activeDocCount > 1 && (
+                 <p style={{ fontSize: '0.9rem', color: '#6b7280' }}>
+                   Analyzing: {activeDocs.map(d => d.original_name).join(', ')}
+                 </p>
+               )}
             </div>
             
-            <div style={{ background: 'white/50', borderRadius: '24px', border: '1px solid white', padding: '1.5rem', backdropBlur: 'xl' }}>
-              <DocumentOverview document={activeDoc} />
-            </div>
+            {activeDocCount === 1 && (
+              <div style={{ background: 'white/50', borderRadius: '24px', border: '1px solid white', padding: '1.5rem', backdropBlur: 'xl' }}>
+                <DocumentOverview document={mainDoc} />
+              </div>
+            )}
           </div>
         ) : (
           <>

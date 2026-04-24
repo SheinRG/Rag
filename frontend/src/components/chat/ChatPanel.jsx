@@ -7,7 +7,7 @@ import useDocumentStore from '../../store/documentStore';
 import { streamPost } from '../../api/client';
 
 export default function ChatPanel({ showWebSearch, onCloseWebSearch, initialWebSearchQuery = '', onAddToNote }) {
-  const { messages, isStreaming, sendMessage, activeDocumentId } = useChatStore();
+  const { messages, isStreaming, sendMessage, activeDocumentIds } = useChatStore();
   const { documents } = useDocumentStore();
   const [webSearching, setWebSearching] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -35,7 +35,7 @@ export default function ChatPanel({ showWebSearch, onCloseWebSearch, initialWebS
       const stream = await streamPost('/search/web', { 
         query,
         history: msgsForHistory,
-        document_id: activeDocumentId || null
+        document_ids: activeDocumentIds
       });
       if (!stream) throw new Error('No stream');
 
@@ -124,7 +124,7 @@ export default function ChatPanel({ showWebSearch, onCloseWebSearch, initialWebS
       <MessageList 
         messages={messages} 
         onReask={handleReask} 
-        activeDoc={readyDocs.find(d => d.id === activeDocumentId)} 
+        activeDocs={readyDocs.filter(d => activeDocumentIds.includes(d.id))} 
         onSuggestionClick={sendMessage} 
         onAddToNote={onAddToNote}
         onEditMessage={(content) => setEditValue(content)}

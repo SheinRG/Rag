@@ -20,11 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 def retrieve(
-    query: str, user_id: str, top_k: int = TOP_K, document_id: str = None, notebook_id: str = None
+    query: str, user_id: str, top_k: int = TOP_K, document_ids: list[str] = None, notebook_id: str = None
 ) -> List[dict]:
     """
     Embeds the query and performs cosine similarity search against user's chunks.
     Optionally filters by document_id or notebook_id.
+    Optionally filters by a list of document_ids or notebook_id.
     Returns a list of dicts with content, document_id, source name, and similarity score.
     """
     try:
@@ -36,7 +37,7 @@ def retrieve(
         rpc_params = {
             "query_embedding": query_embedding,
             "match_user_id": user_id,
-            "match_count": candidate_count if not (document_id or notebook_id) else 100,
+            "match_count": candidate_count if not (document_ids or notebook_id) else 100,
             "match_threshold": SIMILARITY_THRESHOLD,
         }
 
@@ -44,9 +45,9 @@ def retrieve(
         result = supabase.rpc("match_chunks", rpc_params).execute()
         chunks = result.data or []
 
-        # Filter by document_id or notebook_id in Python
-        if document_id and chunks:
-            chunks = [c for c in chunks if c.get("document_id") == document_id]
+        # Filter by document_ids or notebook_id in Python
+        if document_ids and chunks:
+            chunks = [c for c in chunks if c.get("document_id") in document_ids]
         elif notebook_id and chunks:
             doc_res = supabase.table("documents").select("id").eq("notebook_id", notebook_id).execute()
             valid_doc_ids = {d["id"] for d in doc_res.data}

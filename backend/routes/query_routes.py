@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 class AskRequestWithDoc(BaseModel):
     question: str
-    document_id: str | None = None
+    document_ids: list[str] | None = None
     notebook_id: str | None = None
 
 
@@ -36,7 +36,7 @@ async def ask_stream_endpoint(
         )
 
     return StreamingResponse(
-        ask_stream(body.question, str(user.id), document_id=body.document_id, notebook_id=body.notebook_id),
+        ask_stream(body.question, str(user.id), document_ids=body.document_ids, notebook_id=body.notebook_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -34,7 +34,7 @@ export default function DashboardPage() {
     setNotePrefill(content);
     setAddNoteTrigger(prev => prev + 1);
   };
-  const activeDocumentId = useChatStore((s) => s.activeDocumentId);
+  const activeDocumentIds = useChatStore((s) => s.activeDocumentIds);
   const switchNotebook = useChatStore((s) => s.switchNotebook);
   const { activeNotebook, setActiveNotebook, createNotebook } = useNotebookStore();
   const user = useAuthStore((s) => s.user);
@@ -170,7 +170,7 @@ export default function DashboardPage() {
           <StudioPanel
             isOpen={studioOpen}
             onToggle={() => setStudioOpen(!studioOpen)}
-            activeDocumentId={activeDocumentId}
+            activeDocumentIds={activeDocumentIds}
             notebookId={notebookId}
             onWebSearch={() => setShowWebSearch(true)}
           />

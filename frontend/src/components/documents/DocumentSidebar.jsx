@@ -14,7 +14,7 @@ import { HoverBorderGradient } from '../ui/HoverBorderGradient';
 
 export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, notebookId, addNoteTrigger, notePrefill }) {
   const { documents, fetchDocuments, deleteDocument, loading } = useDocumentStore();
-  const { activeDocumentId, setActiveDocument } = useChatStore();
+  const { activeDocumentIds, toggleDocument } = useChatStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [webSearchQuery, setWebSearchQuery] = useState('');
@@ -86,7 +86,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
     return () => clearInterval(interval);
   }, [fetchDocuments, notebookId]);
 
-  const activeDoc = documents.find(d => d.id === activeDocumentId);
+
 
   // ─── Collapsed Icon Bar ───
   if (!isOpen) {
@@ -122,9 +122,9 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
           {documents.map((doc) => (
             <div 
               key={doc.id}
-              onClick={() => setActiveDocument(doc.id)}
+              onClick={() => toggleDocument(doc.id)}
               className={`w-9 h-9 rounded-full flex items-center justify-center text-xs transition-all duration-200 cursor-pointer shadow-sm ${
-                activeDocumentId === doc.id 
+                activeDocumentIds.includes(doc.id) 
                   ? 'bg-black text-white scale-110 shadow-md' 
                   : 'bg-white/80 text-gray-400 hover:bg-white hover:text-black'
               }`}
@@ -259,14 +259,21 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {documents.map((doc, i) => (
                 <motion.div
                   key={doc.id}
+                  layout
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: i * 0.05 }}
+                  exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                  transition={{ 
+                    layout: { type: "spring", stiffness: 350, damping: 25 },
+                    opacity: { duration: 0.2 },
+                    x: { duration: 0.2 },
+                    delay: i * 0.03
+                  }}
+                  style={{ position: 'relative', zIndex: documents.length - i }}
                 >
                   <DocumentCard doc={doc} onDelete={deleteDocument} />
                 </motion.div>
@@ -274,14 +281,21 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
             </AnimatePresence>
 
             {/* Notes - rendered inline with documents */}
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {notes.map((note, i) => (
                 <motion.div
                   key={note.id}
+                  layout
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: (documents.length + i) * 0.05 }}
+                  exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                  transition={{ 
+                    layout: { type: "spring", stiffness: 350, damping: 25 },
+                    opacity: { duration: 0.2 },
+                    x: { duration: 0.2 },
+                    delay: (documents.length + i) * 0.03 
+                  }}
+                  style={{ position: 'relative', zIndex: notes.length - i }}
                 >
                   <NoteCard
                     note={note}

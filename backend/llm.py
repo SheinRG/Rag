@@ -48,16 +48,16 @@ Guidelines for your response:
 
 
 async def ask_stream(
-    question: str, user_id: str, document_id: str = None, notebook_id: str = None
+    question: str, user_id: str, document_ids: list[str] = None, notebook_id: str = None
 ) -> AsyncGenerator[str, None]:
     """
     Main streaming Q&A function.
     Retrieves context, queries Groq, and yields SSE events.
-    Optionally filters by document_id for per-document chats.
+    Optionally filters by a list of document_ids for multi-source chats.
     """
     try:
         # Step 1: Retrieve relevant chunks
-        chunks = retrieve(question, user_id, document_id=document_id, notebook_id=notebook_id)
+        chunks = retrieve(question, user_id, document_ids=document_ids, notebook_id=notebook_id)
 
         # Step 3: Build prompt
         system_prompt = build_system_prompt(chunks)

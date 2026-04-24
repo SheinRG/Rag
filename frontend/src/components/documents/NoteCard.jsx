@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 
 export default function NoteCard({ note, onView, onEdit, onDelete }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const formattedDate = note.date
     ? new Date(note.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -25,7 +26,8 @@ export default function NoteCard({ note, onView, onEdit, onDelete }) {
         display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
         cursor: 'pointer',
         boxShadow: isHovered ? '0 8px 24px rgba(225, 29, 72, 0.08)' : '0 2px 10px rgba(0,0,0,0.02)',
-        transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+        opacity: isDeleting ? 0.3 : 1,
+        transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -106,7 +108,16 @@ export default function NoteCard({ note, onView, onEdit, onDelete }) {
             </svg>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete?.(note.id); }}
+            onClick={async (e) => { 
+              e.stopPropagation();
+              setIsDeleting(true);
+              try {
+                await onDelete?.(note.id);
+              } catch (err) {
+                setIsDeleting(false);
+              }
+            }}
+            disabled={isDeleting}
             style={{
               width: '24px', height: '24px', borderRadius: '8px',
               border: 'none', background: '#FFF1F2', cursor: 'pointer',

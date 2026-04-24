@@ -106,11 +106,14 @@ const studioFeatures = [
   },
 ];
 
-export default function StudioPanel({ isOpen, onToggle, activeDocumentId, notebookId }) {
+export default function StudioPanel({ isOpen, onToggle, activeDocumentIds, notebookId }) {
   const [activeModal, setActiveModal] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [loadingFeature, setLoadingFeature] = useState(null);
   const sendMessage = useChatStore((s) => s.sendMessage);
+
+  // Get the most recently selected document as the primary focus for single-doc tools
+  const focusDocId = activeDocumentIds?.[activeDocumentIds.length - 1] || null;
 
   const handleFeatureClick = async (feature) => {
     if (feature.comingSoon) return;
@@ -124,7 +127,7 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId, notebo
     setLoadingFeature(feature.id);
     try {
       let endpoint = `/studio/${feature.id}`;
-      let payload = { document_id: activeDocumentId || null };
+      let payload = { document_id: focusDocId };
 
       if (feature.id === 'synthesize') {
         if (!notebookId) throw new Error("Please select a notebook first.");
@@ -173,7 +176,7 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId, notebo
           <MindMapModal data={modalData} onClose={() => setActiveModal(null)} />
         )}
         {activeModal === 'research' && (
-          <ResearchReportModal onClose={() => setActiveModal(null)} activeDocumentId={activeDocumentId} />
+          <ResearchReportModal onClose={() => setActiveModal(null)} activeDocumentIds={activeDocumentIds} />
         )}
       </AnimatePresence>,
       document.body
@@ -243,7 +246,7 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId, notebo
       <div className="flex-1 overflow-auto p-4 flex flex-col gap-4">
         {/* Key Topics — Study Guide */}
         <KeyTopics
-          activeDocumentId={activeDocumentId}
+          activeDocumentIds={activeDocumentIds}
           onTopicClick={sendMessage}
         />
 

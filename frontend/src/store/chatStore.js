@@ -2,87 +2,66 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { streamPost } from '../api/client';
 
-
-
 const useChatStore = create(
   persist(
     (set, get) => ({
       messages: [],
       isStreaming: false,
-      activeDocumentId: null,
+      activeDocumentIds: [],
       messageHistory: {},
-      notebookHistory: {}, // { [nbId]: { messages, activeDocumentId, messageHistory } }
+      notebookHistory: {}, // { [nbId]: { messages, activeDocumentIds, messageHistory } }
       currentNotebookId: null,
 
       switchNotebook: (notebookId) => {
-        const { currentNotebookId, messages, activeDocumentId, messageHistory, notebookHistory } = get();
+        const { currentNotebookId, messages, activeDocumentIds, messageHistory, notebookHistory } = get();
         
-        // Don't do anything if it's the same notebook
         if (notebookId === currentNotebookId) return;
 
-        // 1. Save current state into history if we were in a notebook
         const newNotebookHistory = { ...notebookHistory };
         if (currentNotebookId || currentNotebookId === null) {
-          // Use 'default' for orphan documents (null notebookId)
           const key = currentNotebookId || 'default';
           newNotebookHistory[key] = {
             messages,
-            activeDocumentId,
+            activeDocumentIds,
             messageHistory
           };
         }
 
-        // 2. Load the state for the new notebook
         const targetKey = notebookId || 'default';
         const saved = newNotebookHistory[targetKey] || {
           messages: [],
-          activeDocumentId: null,
+          activeDocumentIds: [],
           messageHistory: {}
         };
 
         set({
           currentNotebookId: notebookId,
           messages: saved.messages,
-          activeDocumentId: saved.activeDocumentId,
+          activeDocumentIds: saved.activeDocumentIds,
           messageHistory: saved.messageHistory,
           notebookHistory: newNotebookHistory
         });
       },
 
-      setActiveDocument: (docId) => {
-        // Store current tab's messages before switching
-        const currentMessages = get().messages;
-        const currentDocId = get().activeDocumentId;
-        
+      toggleDocument: (docId) => {
         set((state) => {
-          const newMessageHistory = { ...state.messageHistory };
-          if (currentDocId) {
-            newMessageHistory[currentDocId] = currentMessages;
-          } else {
-            newMessageHistory['all'] = currentMessages;
-          }
+          const isSelected = state.activeDocumentIds.includes(docId);
+          const newIds = isSelected 
+            ? state.activeDocumentIds.filter(id => id !== docId)
+            : [...state.activeDocumentIds, docId];
           
-          return {
-            activeDocumentId: docId,
-            messages: [],
-            messageHistory: newMessageHistory,
-          };
+          return { activeDocumentIds: newIds };
         });
+      },
 
-        // Restore messages for the new tab (or start fresh)
-        setTimeout(() => {
-          const history = get().messageHistory;
-          const storedMessages = docId ? history[docId] : history['all'];
-          if (storedMessages) {
-            set({ messages: storedMessages });
-          }
-        }, 0);
+      setActiveDocument: (docId) => {
+        // Legacy support if needed, set single active
+        set({ activeDocumentIds: docId ? [docId] : [] });
       },
 
       sendMessage: async (question) => {
-        const { activeDocumentId, currentNotebookId } = get();
+        const { activeDocumentIds, currentNotebookId } = get();
         
-        // Add user message + empty assistant message in one setState
         set((state) => ({
           messages: [
             ...state.messages,
@@ -92,7 +71,6 @@ const useChatStore = create(
           isStreaming: true,
         }));
 
-        // Token buffer — accumulate tokens and flush at ~30fps
         let tokenBuffer = '';
         let rafId = null;
 
@@ -105,7 +83,6 @@ const useChatStore = create(
             const msgs = state.messages;
             const last = msgs[msgs.length - 1];
             const updated = { ...last, content: last.content + chunk };
-            // Mutate-in-place for the array, only replace last element
             const next = msgs.slice(0, -1);
             next.push(updated);
             return { messages: next };
@@ -121,13 +98,11 @@ const useChatStore = create(
         try {
           const stream = await streamPost('/ask/stream', { 
             question,
-            document_id: activeDocumentId,
+            document_ids: activeDocumentIds,
             notebook_id: currentNotebookId
           });
           
-          if (!stream) {
-            throw new Error('No stream response');
-          }
+          if (!stream) throw new Error('No stream response');
           
           const reader = stream.getReader();
           const decoder = new TextDecoder();
@@ -153,11 +128,7 @@ const useChatStore = create(
                   tokenBuffer += event.content;
                   scheduleFlush();
                 } else if (event.type === 'sources') {
-                  // Flush any remaining tokens first
-                  if (rafId !== null) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                  }
+                  if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
                   flushTokens();
                   set((state) => {
                     const msgs = state.messages;
@@ -175,10 +146,7 @@ const useChatStore = create(
                     return { messages: next };
                   });
                 } else if (event.type === 'error') {
-                  if (rafId !== null) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                  }
+                  if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
                   set((state) => {
                     const msgs = state.messages;
                     const last = msgs[msgs.length - 1];
@@ -187,30 +155,18 @@ const useChatStore = create(
                     return { messages: next };
                   });
                 } else if (event.type === 'done') {
-                  // Flush remaining tokens before marking done
-                  if (rafId !== null) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                  }
+                  if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
                   flushTokens();
                   set({ isStreaming: false });
                 }
-              } catch {
-                // skip malformed JSON
-              }
+              } catch { }
             }
           }
-          // Final flush in case there are leftover tokens
-          if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
-          }
+          if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
           flushTokens();
           set({ isStreaming: false });
         } catch (err) {
-          if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-          }
+          if (rafId !== null) cancelAnimationFrame(rafId);
           console.error('Chat error:', err);
           set((state) => {
             const msgs = state.messages;
@@ -218,7 +174,7 @@ const useChatStore = create(
             const next = msgs.slice(0, -1);
             next.push({
               ...last,
-              content: `Failed to connect to the AI: ${err.message}. Is the backend running?`,
+              content: `Failed to connect to the AI: ${err.message}.`,
               isError: true,
             });
             return { messages: next, isStreaming: false };
@@ -235,7 +191,7 @@ const useChatStore = create(
         notebookHistory: state.notebookHistory,
         currentNotebookId: state.currentNotebookId,
         messages: state.messages,
-        activeDocumentId: state.activeDocumentId,
+        activeDocumentIds: state.activeDocumentIds,
         messageHistory: state.messageHistory,
       }),
     }

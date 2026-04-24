@@ -3,11 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../api/client';
 import useChatStore from '../../store/chatStore';
 
-export default function KeyTopics({ activeDocumentId, onTopicClick }) {
+export default function KeyTopics({ activeDocumentIds = [], onTopicClick }) {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [docName, setDocName] = useState('');
+  
+  // Use the most recently selected document for the study guide
+  const focusDocId = activeDocumentIds?.[activeDocumentIds.length - 1] || null;
+
   const [exploredTopics, setExploredTopics] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('nexus-explored-topics') || '{}');
@@ -17,7 +21,7 @@ export default function KeyTopics({ activeDocumentId, onTopicClick }) {
 
   // Fetch topics when document changes
   useEffect(() => {
-    if (!activeDocumentId) {
+    if (!focusDocId) {
       setTopics([]);
       setDocName('');
       return;
@@ -27,7 +31,7 @@ export default function KeyTopics({ activeDocumentId, onTopicClick }) {
       setLoading(true);
       setError(null);
       try {
-        const { data } = await api.get(`/documents/${activeDocumentId}/topics`);
+        const { data } = await api.get(`/documents/${focusDocId}/topics`);
         setTopics(data.topics || []);
         setDocName(data.document_name || '');
       } catch (err) {
@@ -40,11 +44,11 @@ export default function KeyTopics({ activeDocumentId, onTopicClick }) {
     };
 
     fetchTopics();
-  }, [activeDocumentId]);
+  }, [focusDocId]);
 
   const handleTopicClick = (topic) => {
     // Mark as explored
-    const key = `${activeDocumentId}::${topic.topic}`;
+    const key = `${focusDocId}::${topic.topic}`;
     const updated = { ...exploredTopics, [key]: true };
     setExploredTopics(updated);
     localStorage.setItem('nexus-explored-topics', JSON.stringify(updated));
@@ -54,13 +58,13 @@ export default function KeyTopics({ activeDocumentId, onTopicClick }) {
   };
 
   const isExplored = (topic) => {
-    return exploredTopics[`${activeDocumentId}::${topic.topic}`] || false;
+    return exploredTopics[`${focusDocId}::${topic.topic}`] || false;
   };
 
   const exploredCount = topics.filter(t => isExplored(t)).length;
   const totalCount = topics.length;
 
-  if (!activeDocumentId) return null;
+  if (!focusDocId) return null;
 
   return (
     <div style={{

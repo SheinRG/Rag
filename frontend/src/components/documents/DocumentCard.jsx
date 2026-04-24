@@ -77,12 +77,13 @@ export default function DocumentCard({ doc, onDelete }) {
   const st = statusColors[doc.status] || statusColors.processing;
   const pollStatus = useDocumentStore((state) => state.pollDocumentStatus);
   const renameDocument = useDocumentStore((state) => state.renameDocument);
-  const { activeDocumentId, setActiveDocument } = useChatStore();
-  const isSelected = activeDocumentId === doc.id;
+  const { activeDocumentIds, toggleDocument } = useChatStore();
+  const isSelected = activeDocumentIds.includes(doc.id);
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(doc.original_name);
   const [isHovered, setIsHovered] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef(null);
 
   const style = typeStyles[doc.file_type] || { color: 'text-gray-500', bg: 'bg-gray-50/50', border: 'border-gray-100/50' };
@@ -124,7 +125,7 @@ return (
       transition={{ type: 'spring', stiffness: 500, damping: 25 }}
       onClick={() => {
         if (doc.status === 'ready') {
-          setActiveDocument(isSelected ? null : doc.id);
+          toggleDocument(doc.id);
         }
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -139,6 +140,7 @@ return (
         cursor: doc.status === 'ready' ? 'pointer' : 'default',
         boxShadow: isSelected ? '0 8px 24px rgba(0,0,0,0.08)' : '0 2px 10px rgba(0,0,0,0.02)',
         transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+        opacity: isDeleting ? 0.3 : 1,
         transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
@@ -197,8 +199,18 @@ return (
               Rename
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(doc.id); }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-card-hover)] flex items-center gap-2"
+              onClick={async (e) => { 
+                e.stopPropagation(); 
+                setShowMenu(false);
+                setIsDeleting(true);
+                try {
+                  await onDelete(doc.id);
+                } catch (err) {
+                  setIsDeleting(false);
+                }
+              }}
+              disabled={isDeleting}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-card-hover)] flex items-center gap-2 disabled:opacity-50"
               style={{ color: 'var(--color-error)' }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -206,7 +218,7 @@ return (
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
               </svg>
-              Delete
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </button>
           </motion.div>
         )}

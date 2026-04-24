@@ -66,13 +66,25 @@ const useDocumentStore = create((set, get) => ({
   },
 
   deleteDocument: async (docId) => {
+    const previousDocuments = get().documents;
+    
+    // Optimistically update the UI immediately
+    set((state) => ({
+      documents: state.documents.filter((d) => d.id !== docId),
+    }));
+
     try {
+      const { default: useChatStore } = await import('./chatStore');
+      const chatState = useChatStore.getState();
+      if (chatState.activeDocumentIds.includes(docId)) {
+        chatState.toggleDocument(docId);
+      }
+      
       await api.delete(`/documents/${docId}`);
-      set((state) => ({
-        documents: state.documents.filter((d) => d.id !== docId),
-      }));
     } catch (err) {
-      set({ error: err.message });
+      // Revert if the API call fails
+      set({ documents: previousDocuments, error: err.message });
+      throw err;
     }
   },
 

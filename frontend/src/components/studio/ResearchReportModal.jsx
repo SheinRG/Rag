@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export default function ResearchReportModal({ onClose, activeDocumentId }) {
+export default function ResearchReportModal({ onClose, activeDocumentIds }) {
   const [prompt, setPrompt] = useState('');
   const [steps, setSteps] = useState([]);
   const [sections, setSections] = useState([]);
@@ -33,7 +33,7 @@ export default function ResearchReportModal({ onClose, activeDocumentId }) {
       const { streamPost } = await import('../../api/client');
       const stream = await streamPost('/media/research-report', {
         prompt: prompt.trim(),
-        document_ids: activeDocumentId ? [activeDocumentId] : [],
+        document_ids: activeDocumentIds || [],
       });
 
       const reader = stream.getReader();

@@ -59,7 +59,22 @@ def fetch_youtube_transcript(video_id: str) -> list[dict]:
     from youtube_transcript_api import YouTubeTranscriptApi
 
     ytt_api = YouTubeTranscriptApi()
-    transcript = ytt_api.fetch(video_id)
+    
+    try:
+        # Try fetching default (usually English)
+        transcript = ytt_api.fetch(video_id)
+    except:
+        # If default fails, list all available transcripts
+        t_list = ytt_api.list(video_id)
+        # Get the first available transcript
+        t = next(iter(t_list))
+        # Translate to English if possible
+        if t.language_code != 'en' and t.is_translatable:
+            try:
+                t = t.translate('en')
+            except:
+                pass
+        transcript = t.fetch()
 
     # Convert FetchedTranscript snippets to list of dicts
     entries = []
