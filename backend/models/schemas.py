@@ -1,5 +1,5 @@
 """
-DocMind AI — Pydantic Schemas
+Nexus — Pydantic Schemas
 All request/response models for the API.
 """
 
@@ -54,6 +54,10 @@ class DocumentUploadResponse(BaseModel):
     id: str
     original_name: str
     status: str
+
+
+class DocumentRenameRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
 
 
 # ─── Query Schemas ───

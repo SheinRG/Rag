@@ -35,7 +35,7 @@ export default function SignupPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
            <Link to="/" className="text-[#111827] no-underline focus:outline-none flex items-center gap-2">
-             <span className="font-extrabold text-[1.6rem] tracking-tighter text-black">DocMind AI</span>
+             <span className="font-extrabold text-[1.6rem] tracking-tighter text-black">Nexus</span>
            </Link>
         </div>
 

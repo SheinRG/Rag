@@ -5,16 +5,78 @@ import useChatStore from '../../store/chatStore';
 import DocumentCard from './DocumentCard';
 import DocumentOverview from './DocumentOverview';
 import AddSourceModal from './AddSourceModal';
+import NoteEditorModal from './NoteEditorModal';
+import NoteCard from './NoteCard';
+import NoteViewModal from './NoteViewModal';
 import SpotlightCard from '../ui/SpotlightCard';
 import { HoverBorderGradient } from '../ui/HoverBorderGradient';
-import ConnectorsModal from './ConnectorsModal';
 
-export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, notebookId }) {
+
+export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, notebookId, addNoteTrigger, notePrefill }) {
   const { documents, fetchDocuments, deleteDocument, loading } = useDocumentStore();
   const { activeDocumentId, setActiveDocument } = useChatStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConnectorsOpen, setIsConnectorsOpen] = useState(false);
+
   const [webSearchQuery, setWebSearchQuery] = useState('');
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingNote, setViewingNote] = useState(null);
+  const [editingNote, setEditingNote] = useState(null);
+  const [notes, setNotes] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`nexus-notes-${notebookId || 'default'}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+
+  // Sync notes with localStorage when notebookId changes
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`nexus-notes-${notebookId || 'default'}`);
+      setNotes(stored ? JSON.parse(stored) : []);
+    } catch { setNotes([]); }
+  }, [notebookId]);
+
+  // Open note modal when header button triggers it
+  useEffect(() => {
+    if (addNoteTrigger > 0) {
+      setEditingNote(null);
+      setIsNoteModalOpen(true);
+    }
+  }, [addNoteTrigger]);
+
+  const saveNotes = (updatedNotes) => {
+    setNotes(updatedNotes);
+    localStorage.setItem(`nexus-notes-${notebookId || 'default'}`, JSON.stringify(updatedNotes));
+  };
+
+  const handleSaveNote = (note) => {
+    const existing = notes.findIndex(n => n.id === note.id);
+    if (existing >= 0) {
+      const updated = [...notes];
+      updated[existing] = note;
+      saveNotes(updated);
+    } else {
+      saveNotes([...notes, note]);
+    }
+    setEditingNote(null);
+  };
+
+  const handleDeleteNote = (noteId) => {
+    saveNotes(notes.filter(n => n.id !== noteId));
+  };
+
+  const handleEditNote = (note) => {
+    setViewingNote(null);
+    setIsViewModalOpen(false);
+    setEditingNote(note);
+    setIsNoteModalOpen(true);
+  };
+
+  const handleViewNote = (note) => {
+    setViewingNote(note);
+    setIsViewModalOpen(true);
+  };
 
   useEffect(() => {
     // Clear stale documents immediately when switching notebooks
@@ -56,7 +118,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
         </button>
 
         {/* Document type indicators */}
-        <div className="flex-1 flex flex-col items-center gap-3 mt-4 px-1 overflow-auto no-scrollbar">
+        <div className="flex-1 flex flex-col items-center gap-4 mt-4 px-2 py-2 overflow-y-auto no-scrollbar">
           {documents.map((doc) => (
             <div 
               key={doc.id}
@@ -76,14 +138,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
           ))}
         </div>
 
-        {/* Connectors shortcut */}
-        <button
-          className="mt-2 w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all duration-200"
-          title="Connectors"
-          onClick={() => setIsConnectorsOpen(true)}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
-        </button>
+
 
         {/* Add source shortcut */}
         <button
@@ -129,15 +184,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
         </button>
       </div>
 
-      <div className="px-4 mt-2">
-        <button 
-          onClick={() => setIsConnectorsOpen(true)}
-          className="w-full py-2 bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.01)] rounded-[16px] text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 text-gray-500 transition-colors"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
-          Connectors
-        </button>
-      </div>
+
 
       <div className="px-3 mt-4 mb-3">
         <HoverBorderGradient
@@ -155,8 +202,8 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
             }}
             className="flex flex-col pt-1 pl-1 pr-1 text-gray-700 w-full"
           >
-             <div className="flex items-end gap-1.5 w-full">
-                <div className="flex-1 min-h-[40px] flex items-center">
+             <div className="flex items-center gap-2 w-full px-2">
+                <div className="flex-1 min-h-[44px] flex items-center">
                     <textarea
                         value={webSearchQuery}
                         onChange={(e) => {
@@ -176,13 +223,17 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
                         }}
                         rows="1"
                         placeholder="Search the web for"
-                        className="w-full bg-transparent border-none outline-none text-[13px] placeholder-gray-500 py-2.5 px-2 resize-none leading-relaxed text-center"
-                        style={{ height: '40px' }}
+                        className="w-full bg-transparent border-none outline-none text-[15px] placeholder-gray-500 py-2 px-3 resize-none leading-tight flex items-center"
+                        style={{ height: '44px', display: 'flex', alignItems: 'center' }}
                     />
                 </div>
-                <div className="pb-1.5 pr-1">
-                    <button type="submit" disabled={!webSearchQuery.trim()} className="w-7 h-7 shrink-0 rounded-full bg-[#f1f5f9] hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                <div className="flex items-center justify-center">
+                    <button 
+                      type="submit" 
+                      disabled={!webSearchQuery.trim()} 
+                      className="w-8 h-8 shrink-0 rounded-full bg-gray-100/80 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </button>
                 </div>
              </div>
@@ -191,7 +242,7 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
       </div>
 
       {/* Document List */}
-      <div className="flex-1 overflow-auto px-3 pb-3">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pt-2 pb-3">
         {loading && documents.length === 0 ? (
           <p className="text-center text-gray-400 py-8 text-sm">
             Loading documents...
@@ -221,6 +272,26 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
                 </motion.div>
               ))}
             </AnimatePresence>
+
+            {/* Notes - rendered inline with documents */}
+            <AnimatePresence>
+              {notes.map((note, i) => (
+                <motion.div
+                  key={note.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ delay: (documents.length + i) * 0.05 }}
+                >
+                  <NoteCard
+                    note={note}
+                    onView={handleViewNote}
+                    onEdit={handleEditNote}
+                    onDelete={handleDeleteNote}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -228,7 +299,21 @@ export default function DocumentSidebar({ isOpen, onToggle, onWebSearch, noteboo
       {/* Document Overview Panel removed - now in chat panel */}
 
       <AddSourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} notebookId={notebookId} />
-      <ConnectorsModal isOpen={isConnectorsOpen} onClose={() => setIsConnectorsOpen(false)} />
+
+      <NoteEditorModal
+        isOpen={isNoteModalOpen}
+        onClose={() => { setIsNoteModalOpen(false); setEditingNote(null); }}
+        onSave={handleSaveNote}
+        editNote={editingNote}
+        prefillContent={notePrefill}
+      />
+
+      <NoteViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => { setIsViewModalOpen(false); setViewingNote(null); }}
+        note={viewingNote}
+        onEdit={handleEditNote}
+      />
     </div>
   );
 }

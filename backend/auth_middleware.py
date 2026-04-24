@@ -1,5 +1,5 @@
 """
-DocMind AI — Authentication Middleware
+Nexus — Authentication Middleware
 JWT verification via Supabase Auth.
 """
 

@@ -1,5 +1,5 @@
 """
-DocMind AI — Media Routes
+Nexus — Media Routes
 YouTube video ingestion and Image OCR/analysis endpoints.
 """
 
@@ -390,19 +390,26 @@ async def generate_research_report(
 
             context = "\n\n".join(all_chunks[:40])
 
-            # Step 2: Generate outline
-            yield f"data: {json.dumps({'type': 'status', 'content': 'Analyzing documents and creating outline...', 'step': 1})}\n\n"
+            # Step 2: Generate deep-dive outline
+            yield f"data: {json.dumps({'type': 'status', 'content': 'Architecting deep-dive research dossier...', 'step': 1})}\n\n"
 
             outline_response = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a research analyst. Given document content and a research prompt, create a structured outline for a comprehensive report. Return ONLY a JSON array of section titles, like: [\"Executive Summary\", \"Section 1: ...\", \"Section 2: ...\", \"Conclusion\"]. No markdown fences.",
+                        "content": """You are a Senior Research Architect. Given a specific query and document context, design a formal research dossier structure. 
+                        Unlike a simple summary, this dossier must investigate the prompt deeply.
+                        Return ONLY a JSON array of 4-6 specific section titles that cover: 
+                        1. A Problem Statement or Context, 
+                        2. Multiple layers of Analytical Investigation, 
+                        3. Evidence Synthesis, 
+                        4. Strategic Conclusion.
+                        Return ONLY the JSON array. No markdown fences.""",
                     },
                     {
                         "role": "user",
-                        "content": f"Research prompt: {body.prompt}\n\nDocument content:\n{context[:8000]}",
+                        "content": f"Research prompt: {body.prompt}\n\nDocument content preview:\n{context[:8000]}",
                     },
                 ],
                 max_tokens=500,
@@ -415,32 +422,37 @@ async def generate_research_report(
             except json.JSONDecodeError:
                 json_match = re.search(r'\[[\s\S]*\]', raw_outline)
                 sections = json.loads(json_match.group()) if json_match else [
-                    "Executive Summary", "Key Findings", "Analysis", "Conclusion"
+                    "Contextual Overview", "Evidence-Based Analysis", "Detailed Findings", "Synthesis & Conclusion"
                 ]
 
             yield f"data: {json.dumps({'type': 'outline', 'content': sections})}\n\n"
 
-            # Step 3: Write each section
-            full_report = f"# {body.prompt}\n\n"
+            # Step 3: Write each deep-dive section
+            full_report = f"# Research Dossier: {body.prompt}\n\n"
             for i, section in enumerate(sections):
-                yield f"data: {json.dumps({'type': 'status', 'content': f'Writing: {section}...', 'step': i + 2})}\n\n"
+                yield f"data: {json.dumps({'type': 'status', 'content': f'Investigating: {section}...', 'step': i + 2})}\n\n"
 
                 section_response = client.chat.completions.create(
                     model="llama-3.1-8b-instant",
                     messages=[
                         {
                             "role": "system",
-                            "content": f"""You are writing section "{section}" of a research report titled "{body.prompt}".
-Write 2-4 detailed paragraphs for this section using Markdown formatting.
-Base your analysis on the provided document content. Be thorough and analytical.
-Do NOT include the section title as a header—it will be added automatically.""",
+                            "content": f"""You are a Senior Research Analyst writing the section "{section}" for a formal research dossier titled "{body.prompt}".
+                            
+                            Instructions:
+                            - Write 3-5 comprehensive, analytical paragraphs.
+                            - Use a professional, academic tone.
+                            - Focus on providing specific evidence, data points, and reasoned arguments from the document content.
+                            - Use Markdown formatting (bolding key terms, using sub-bullets if needed).
+                            - Do NOT include the section title as a header.
+                            - This is a DEEP DIVE, so go into the technical or specific details found in the sources.""",
                         },
                         {
                             "role": "user",
                             "content": f"Document content:\n{context[:6000]}",
                         },
                     ],
-                    max_tokens=1000,
+                    max_tokens=1500,
                     temperature=0.4,
                 )
 

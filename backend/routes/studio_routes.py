@@ -1,5 +1,5 @@
 """
-DocMind AI — Studio Routes
+Nexus — Studio Routes
 Endpoints for AI-powered document insights: overview, suggestions, quiz,
 summary, flashcards, and mind map.
 """
@@ -69,6 +69,64 @@ def _generate(system: str, user_msg: str, max_tokens: int = 1500) -> str:
     return response.choices[0].message.content
 
 
+# ─── Key Topics Extraction ───
+
+
+@router.get("/documents/{doc_id}/topics")
+async def extract_key_topics(doc_id: str, user=Depends(get_current_user)):
+    """Extract the main topics/concepts from a document for study navigation."""
+    try:
+        # Verify document belongs to user
+        doc = (
+            supabase.table("documents")
+            .select("id, original_name")
+            .eq("id", doc_id)
+            .eq("user_id", str(user.id))
+            .single()
+            .execute()
+        )
+        if not doc.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        chunks = _get_doc_chunks(doc_id, str(user.id), limit=20)
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No content found for this document")
+
+        context = _build_context(chunks)
+
+        system = """You are an expert academic content analyzer. Extract the key topics and concepts from the provided document content.
+Return ONLY a valid JSON array of objects, each with:
+- "topic": a concise topic name (3-6 words max)
+- "description": a one-line summary of what this topic covers (under 15 words)
+
+Extract between 5 and 10 topics. Order them logically (as they appear in the document).
+Do NOT include any markdown, code fences, or explanation. ONLY the JSON array."""
+
+        user_msg = f"Document: {doc.data['original_name']}\n\nContent:\n{context}"
+
+        raw = _generate(system, user_msg, max_tokens=800)
+        
+        # Clean up response - strip markdown fences if present
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+
+        topics = json.loads(cleaned)
+        return {"topics": topics, "document_name": doc.data["original_name"]}
+
+    except json.JSONDecodeError:
+        logger.error(f"Failed to parse topics JSON: {raw[:200]}")
+        raise HTTPException(status_code=500, detail="Failed to parse topics from AI response")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Key topics extraction failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ─── Document Overview + Suggestions ───
 
 
@@ -95,7 +153,7 @@ async def document_overview(doc_id: str, user=Depends(get_current_user)):
         context = _build_context(chunks)
 
         result = _generate(
-            system="""You are DocMind AI. Given document chunks, produce a JSON response with:
+            system="""You are Nexus. Given document chunks, produce a JSON response with:
 1. "summary": A 2-3 sentence overview of what the document is about.
 2. "suggestions": An array of exactly 3 short, specific questions a user might ask about this document.
 Return ONLY valid JSON, no markdown fences.""",
@@ -182,7 +240,7 @@ async def generate_summary(body: StudioRequest, user=Depends(get_current_user)):
 
         context = _build_context(chunks)
         result = _generate(
-            system="""You are DocMind AI. Generate a comprehensive, well-structured executive summary of the provided content.
+            system="""You are Nexus. Generate a comprehensive, well-structured executive summary of the provided content.
 Use Markdown formatting with headers, bullet points, and bold text.
 Include: Key Themes, Main Points, Important Details, and Conclusions.""",
             user_msg=context,

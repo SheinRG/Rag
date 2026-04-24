@@ -106,7 +106,7 @@ export default function ConnectorsModal({ isOpen, onClose }) {
 
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Connectors</h2>
           <p className="text-sm text-gray-500 mb-8">
-            {isProcessing ? "Processing your secure import..." : "Integrate DocMind with your existing tools to automatically sync and index knowledge."}
+            {isProcessing ? "Processing your secure import..." : "Integrate Nexus with your existing tools to automatically sync and index knowledge."}
           </p>
 
           <div className="space-y-4">

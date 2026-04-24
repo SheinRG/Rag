@@ -100,7 +100,7 @@ export default function Navbar() {
         {/* Logo */}
         <div className="flex-1">
           <Link to={user ? '/dashboard' : '/'} className="text-[#111827] no-underline focus:outline-none">
-             <span className="font-extrabold text-[1.3rem] tracking-tighter text-black">DocMind AI</span>
+             <span className="font-extrabold text-[1.3rem] tracking-tighter text-black">Nexus</span>
           </Link>
         </div>
         

@@ -12,26 +12,32 @@ export default function ResearchReportModal({ onClose, activeDocumentId }) {
   const [phase, setPhase] = useState('input');
   const scrollRef = useRef(null);
 
+  const readerRef = useRef(null);
+
+  const handleStop = () => {
+    if (readerRef.current) {
+      readerRef.current.cancel();
+      setIsGenerating(false);
+      setSteps(prev => [...prev, 'Research stopped by user.']);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setIsGenerating(true);
     setPhase('generating');
-    setSteps(['Initializing research agent...', 'Searching across document index...']);
+    setSteps(['Initializing research agent...']);
     setSections([]);
 
     try {
-      const response = await fetch('http://localhost:8000/api/media/research-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: prompt.trim(),
-          document_ids: activeDocumentId ? [activeDocumentId] : [],
-        }),
+      const { streamPost } = await import('../../api/client');
+      const stream = await streamPost('/media/research-report', {
+        prompt: prompt.trim(),
+        document_ids: activeDocumentId ? [activeDocumentId] : [],
       });
 
-      if (!response.ok) throw new Error('Generation failed');
-
-      const reader = response.body.getReader();
+      const reader = stream.getReader();
+      readerRef.current = reader;
       const decoder = new TextDecoder();
       let buffer = '';
 
@@ -46,22 +52,29 @@ export default function ResearchReportModal({ onClose, activeDocumentId }) {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = JSON.parse(line.substring(6));
-            if (data.type === 'step') {
+            if (data.type === 'status' || data.type === 'step') {
               setSteps(prev => [...prev, data.content]);
             } else if (data.type === 'section') {
-              setSections(prev => [...prev, { title: data.title, text: data.content }]);
-            } else if (data.type === 'final') {
+              setSections(prev => [...prev, { title: data.content.title, text: data.content.text }]);
+            } else if (data.type === 'complete') {
               setFullReport(data.content);
               setPhase('complete');
+            } else if (data.type === 'error') {
+              throw new Error(data.content);
             }
           }
         }
       }
     } catch (err) {
-      console.error(err);
-      setSteps(prev => [...prev, 'Error: ' + err.message]);
+      if (err.name === 'AbortError' || err.message.includes('cancel')) {
+        console.log('Stream cancelled');
+      } else {
+        console.error(err);
+        setSteps(prev => [...prev, 'Error: ' + err.message]);
+      }
     } finally {
       setIsGenerating(false);
+      readerRef.current = null;
     }
   };
 
@@ -96,26 +109,40 @@ export default function ResearchReportModal({ onClose, activeDocumentId }) {
         className="w-full max-w-3xl max-h-[85vh] rounded-[24px] shadow-2xl overflow-hidden flex flex-col bg-white/95 backdrop-blur-2xl border border-white/80 relative z-10"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-rose-100 bg-rose-50/30">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white border border-rose-200 text-rose-600 shadow-sm">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">Research Report</h3>
-              <p className="text-xs text-gray-400">AI-generated multi-section analysis</p>
+              <h3 className="text-[1.1rem] font-extrabold text-rose-900 tracking-tight uppercase">Research Dossier</h3>
+              <p className="text-[0.7rem] font-bold text-rose-500/80 tracking-wider">DEEP-DIVE ANALYTICAL INTELLIGENCE</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+          <div className="flex items-center gap-3">
+            {isGenerating && (
+              <button 
+                onClick={handleStop}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[0.7rem] font-black uppercase tracking-widest bg-white text-rose-600 hover:bg-rose-600 hover:text-white transition-all duration-300 border-2 border-rose-600 shadow-sm group"
+              >
+                <div className="w-2.5 h-2.5 rounded-sm bg-rose-600 group-hover:bg-white animate-pulse"></div>
+                Abort Investigation
+              </button>
+            )}
+            <button onClick={onClose} className="p-2.5 text-rose-400 hover:text-rose-900 hover:bg-white rounded-xl transition-all duration-200 border border-transparent hover:border-rose-100">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 scroll-smooth">
           {phase === 'input' && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-gray-600 leading-relaxed">
-                Provide a specific research objective. DocMind will analyze your documents and compile a comprehensive report with citations.
+                Provide a specific research objective. Nexus will analyze your documents and compile a comprehensive report with citations.
               </p>
               <textarea
                 value={prompt}

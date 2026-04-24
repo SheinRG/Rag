@@ -17,7 +17,7 @@ export default function AddSourceModal({ isOpen, onClose, notebookId }) {
   const onDrop = useCallback(async (accepted, rejected) => {
     setError('');
     if (rejected.length > 0) {
-      setError('Invalid file type. Please upload PDF, TXT, or MD files.');
+      setError('Invalid file type. Please upload PDF, Word, PPT, Excel, TXT, or MD files.');
       return;
     }
     for (const file of accepted) {
@@ -39,6 +39,10 @@ export default function AddSourceModal({ isOpen, onClose, notebookId }) {
       'text/plain': ['.txt'],
       'text/markdown': ['.md'],
       'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],
     },
     maxSize: 20 * 1024 * 1024,
     disabled: uploading,
@@ -205,7 +209,7 @@ export default function AddSourceModal({ isOpen, onClose, notebookId }) {
                     </p>
                     
                     {!uploading && !isDragActive && (
-                      <p className="text-[0.85rem] text-gray-400 font-medium">Supports PDF, TXT, CSV, and Markdown files</p>
+                      <p className="text-[0.85rem] text-gray-400 font-medium">Supports PDF, Word, PPT, Excel, and Text files</p>
                     )}
                     
                     {uploading && (

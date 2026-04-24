@@ -1,5 +1,5 @@
 """
-DocMind AI — Document Routes
+Nexus — Document Routes
 Upload, list, status, and delete documents.
 """
 
@@ -13,7 +13,7 @@ from auth_middleware import get_current_user
 from config import STORAGE_BUCKET
 from utils.file_handler import validate_file, get_file_type
 from ingest import run_ingestion
-from models.schemas import DocumentResponse, DocumentStatusResponse, DocumentUploadResponse
+from models.schemas import DocumentResponse, DocumentStatusResponse, DocumentUploadResponse, DocumentRenameRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Documents"])
@@ -181,4 +181,36 @@ async def delete_document(doc_id: str, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete document.",
+        )
+
+
+@router.patch("/{doc_id}/rename", response_model=DocumentResponse)
+async def rename_document(
+    doc_id: str,
+    payload: DocumentRenameRequest,
+    user=Depends(get_current_user)
+):
+    """Rename a document's original_name."""
+    try:
+        # Verify ownership
+        check = supabase.table("documents").select("id").eq("id", doc_id).eq("user_id", str(user.id)).execute()
+        if not check.data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+        result = (
+            supabase.table("documents")
+            .update({"original_name": payload.name})
+            .eq("id", doc_id)
+            .execute()
+        )
+
+        return DocumentResponse(**result.data[0])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to rename document: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to rename document.",
         )

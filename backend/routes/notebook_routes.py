@@ -1,5 +1,5 @@
 """
-DocMind AI — Notebook Routes
+Nexus — Notebook Routes
 Create, list, update, and delete notebooks.
 """
 
@@ -10,9 +10,12 @@ from typing import Optional
 
 from database import supabase
 from auth_middleware import get_current_user
+from config import GROQ_API_KEY, GROQ_MODEL
+from groq import Groq
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Notebooks"])
+client = Groq(api_key=GROQ_API_KEY)
 
 
 # ─── Schemas ───
@@ -187,4 +190,102 @@ async def delete_notebook(notebook_id: str, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete notebook.",
+        )
+
+
+@router.post("/{notebook_id}/synthesize")
+async def synthesize_notebook(notebook_id: str, user=Depends(get_current_user)):
+    """Generate a comprehensive synthesis report of all documents in the notebook."""
+    try:
+        # 1. Verify notebook exists and belongs to user
+        nb_check = (
+            supabase.table("notebooks")
+            .select("id")
+            .eq("id", notebook_id)
+            .eq("user_id", str(user.id))
+            .single()
+            .execute()
+        )
+        if not nb_check.data:
+            raise HTTPException(status_code=404, detail="Notebook not found or access denied.")
+
+        # 2. Get all documents in this notebook
+        docs_result = (
+            supabase.table("documents")
+            .select("id, original_name")
+            .eq("notebook_id", notebook_id)
+            .execute()
+        )
+        
+        docs = docs_result.data
+        if not docs:
+            raise HTTPException(status_code=400, detail="Notebook has no documents to synthesize. Please add some sources first.")
+
+        # 3. Build context from chunks
+        doc_ids = [doc["id"] for doc in docs]
+        chunks_result = (
+            supabase.table("chunks")
+            .select("content, document_id")
+            .in_("document_id", doc_ids)
+            .eq("user_id", str(user.id))
+            .limit(15)  # Reduced to avoid Groq TPM limits
+            .execute()
+        )
+        
+        chunks = chunks_result.data
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No readable content found in your documents. Make sure they are fully processed.")
+
+        doc_map = {doc["id"]: doc["original_name"] for doc in docs}
+        
+        context_parts = []
+        for chunk in chunks:
+            doc_name = doc_map.get(chunk["document_id"], "Unknown Document")
+            context_parts.append(f"[From: {doc_name}]\n{chunk['content']}")
+            
+        context = "\n\n".join(context_parts)
+        
+        # 4. Synthesize with LLM (Dashboard Overview Style)
+        prompt = f"""You are an expert knowledge curator. Your task is to provide a high-level "Dashboard Overview" of this research notebook.
+        
+        Rather than a detailed report, create a concise, thematic Executive Briefing that:
+        1. Identifies the "Big Picture": What is the primary purpose of this collection of documents?
+        2. Highlights the 3-5 most critical overarching themes that appear across multiple sources.
+        3. Provides a "Quick Reference" summary for someone who needs to understand the notebook's essence in 60 seconds.
+
+        Format professionally with Markdown:
+        - Use ## for main headers.
+        - Use bold text for key terms.
+        - Keep the tone objective and bird's-eye view.
+        - Do NOT get bogged down in granular details; focus on the synthesis of the whole.
+
+        --- DOCUMENTS CONTEXT ---
+        {context}
+        --- END CONTEXT ---
+
+        Write the Notebook Dashboard Overview now:"""
+
+        if not GROQ_API_KEY:
+            raise HTTPException(status_code=500, detail="LLM configuration missing (API Key).")
+
+        completion = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            max_tokens=2048,
+        )
+        
+        report_content = completion.choices[0].message.content
+        
+        return {"report": report_content}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to synthesize notebook {notebook_id}: {e}")
+        # Return the actual error message to help the user/dev diagnose
+        error_detail = str(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Synthesis failed: {error_detail}",
         )

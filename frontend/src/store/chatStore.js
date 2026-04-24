@@ -80,7 +80,7 @@ const useChatStore = create(
       },
 
       sendMessage: async (question) => {
-        const { activeDocumentId } = get();
+        const { activeDocumentId, currentNotebookId } = get();
         
         // Add user message + empty assistant message in one setState
         set((state) => ({
@@ -121,7 +121,8 @@ const useChatStore = create(
         try {
           const stream = await streamPost('/ask/stream', { 
             question,
-            document_id: activeDocumentId 
+            document_id: activeDocumentId,
+            notebook_id: currentNotebookId
           });
           
           if (!stream) {
@@ -163,6 +164,14 @@ const useChatStore = create(
                     const last = msgs[msgs.length - 1];
                     const next = msgs.slice(0, -1);
                     next.push({ ...last, sources: event.content });
+                    return { messages: next };
+                  });
+                } else if (event.type === 'suggestions') {
+                  set((state) => {
+                    const msgs = state.messages;
+                    const last = msgs[msgs.length - 1];
+                    const next = msgs.slice(0, -1);
+                    next.push({ ...last, suggestions: event.content });
                     return { messages: next };
                   });
                 } else if (event.type === 'error') {
@@ -220,7 +229,7 @@ const useChatStore = create(
       clearMessages: () => set({ messages: [] }),
     }),
     {
-      name: 'docmind-chat-storage',
+      name: 'nexus-chat-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
         notebookHistory: state.notebookHistory,

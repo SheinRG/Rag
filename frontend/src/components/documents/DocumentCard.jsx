@@ -119,22 +119,27 @@ export default function DocumentCard({ doc, onDelete }) {
 
 return (
     <motion.div
-      whileHover={{ scale: 1.015, y: -1 }}
+      whileHover={{ scale: 1.015 }}
       whileTap={{ scale: 0.99 }}
       transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-      onClick={() => doc.status === 'ready' && setActiveDocument(doc.id)}
+      onClick={() => {
+        if (doc.status === 'ready') {
+          setActiveDocument(isSelected ? null : doc.id);
+        }
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: isSelected ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)',
+        background: isSelected ? '#ffffff' : 'rgba(255,255,255,0.4)',
         backdropFilter: 'blur(12px)',
         borderRadius: '16px',
         padding: '0.75rem',
-        border: `1.2px solid ${isSelected ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.4)'}`,
+        border: `1.5px solid ${isSelected ? '#000000' : 'rgba(255,255,255,0.6)'}`,
         display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
         cursor: doc.status === 'ready' ? 'pointer' : 'default',
-        boxShadow: isSelected ? '0 4px 15px rgba(0,0,0,0.03)' : 'none',
-        transition: 'all 0.2s ease',
+        boxShadow: isSelected ? '0 8px 24px rgba(0,0,0,0.08)' : '0 2px 10px rgba(0,0,0,0.02)',
+        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
       <div className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border ${style.bg} ${style.border} ${style.color}`}>
@@ -142,9 +147,22 @@ return (
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-[0.8rem] text-gray-800 truncate m-0 leading-tight">
-          {doc.original_name}
-        </p>
+        {isEditing ? (
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+            onBlur={handleRename}
+            autoFocus
+            className="w-full bg-white/50 border border-black/10 rounded px-1.5 py-0.5 text-[0.8rem] font-medium text-gray-900 outline-none focus:border-black/30"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <p className="font-medium text-[0.8rem] text-gray-800 truncate m-0 leading-tight">
+            {doc.original_name}
+          </p>
+        )}
 
         <div className="flex items-center gap-2 mt-2">
           <span className={`text-[0.62rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${st.bg} ${st.color}`}>
@@ -165,7 +183,11 @@ return (
             className="absolute right-0 top-6 z-50 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden min-w-[140px]"
           >
             <button
-              onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setEditName(doc.original_name);
+                setIsEditing(true); 
+              }}
               className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-card-hover)] flex items-center gap-2"
               style={{ color: 'var(--color-text)' }}
             >
@@ -189,20 +211,7 @@ return (
           </motion.div>
         )}
 
-        {isEditing ? (
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-              onBlur={handleRename}
-              autoFocus
-              className="w-24 px-1 py-0.5 text-xs rounded border border-[var(--color-primary-400)] bg-[var(--color-input-bg)] outline-none"
-              style={{ color: 'var(--color-text)' }}
-            />
-          </div>
-        ) : isHovered || showMenu ? (
+        {(isHovered || showMenu) && (
           <motion.button
             whileHover={{ scale: 1.2 }}
             whileTap={{ scale: 0.9 }}
@@ -219,7 +228,7 @@ return (
               <circle cx="12" cy="19" r="2"></circle>
             </svg>
           </motion.button>
-        ) : null}
+        )}
       </div>
     </motion.div>
   );

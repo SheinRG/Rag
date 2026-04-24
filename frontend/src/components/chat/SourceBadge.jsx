@@ -47,20 +47,21 @@ export default function SourceBadge({ source }) {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-text)', fontWeight: 700 }}>📄 {name} — Retrieved Context</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', pb: '1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-text)', fontWeight: 600 }}>📄 {name}</h3>
                 <button onClick={() => setIsOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>✕</button>
               </div>
-              {chunks.map((chunk, idx) => (
-                <div key={idx} style={{
-                  background: 'var(--color-surface-secondary)', padding: '1rem', borderRadius: '8px',
-                  marginBottom: '0.75rem', fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--color-text)',
-                  whiteSpace: 'pre-wrap', border: '1px solid var(--color-border)',
-                }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginBottom: '0.4rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chunk {idx + 1}</div>
-                  {chunk}
-                </div>
-              ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {chunks.map((chunk, idx) => (
+                  <div key={idx} style={{
+                    fontSize: '0.92rem', lineHeight: 1.7, color: 'var(--color-text)',
+                    whiteSpace: 'pre-wrap', 
+                  }}>
+                    {chunk}
+                    {idx < chunks.length - 1 && <div style={{ height: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: '40px', h: '1px', background: 'var(--color-border)', opacity: 0.5 }}></div></div>}
+                  </div>
+                ))}
+              </div>
             </motion.div>
           </motion.div>
         )}

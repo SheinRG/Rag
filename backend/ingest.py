@@ -1,5 +1,5 @@
 """
-DocMind AI — Document Ingestion Pipeline
+Nexus — Document Ingestion Pipeline
 Complete pipeline: download → parse → chunk → embed → store.
 """
 
@@ -60,6 +60,53 @@ def parse_document(file_path: str, file_type: str) -> List[Document]:
                     ))
             if not documents:
                 raise ValueError("PDF contains no readable text.")
+            return documents
+
+        elif file_type == "docx":
+            from docx import Document as DocxDocument
+            doc = DocxDocument(file_path)
+            full_text = []
+            for para in doc.paragraphs:
+                full_text.append(para.text)
+            text = "\n".join(full_text)
+            if not text.strip():
+                raise ValueError("Word document is empty.")
+            return [Document(page_content=text, metadata={"source": file_path})]
+
+        elif file_type == "pptx":
+            from pptx import Presentation
+            prs = Presentation(file_path)
+            documents = []
+            for i, slide in enumerate(prs.slides):
+                slide_text = []
+                for shape in slide.shapes:
+                    if hasattr(shape, "text"):
+                        slide_text.append(shape.text)
+                text = "\n".join(slide_text)
+                if text.strip():
+                    documents.append(Document(
+                        page_content=text,
+                        metadata={"page": i + 1, "source": file_path}
+                    ))
+            if not documents:
+                raise ValueError("PowerPoint contains no readable text.")
+            return documents
+
+        elif file_type in ("xlsx", "xls"):
+            import pandas as pd
+            # Read all sheets
+            excel_file = pd.ExcelFile(file_path)
+            documents = []
+            for sheet_name in excel_file.sheet_names:
+                df = pd.read_excel(excel_file, sheet_name=sheet_name)
+                content = df.to_string(index=False)
+                if content.strip():
+                    documents.append(Document(
+                        page_content=f"Sheet: {sheet_name}\n\n{content}",
+                        metadata={"sheet": sheet_name, "source": file_path}
+                    ))
+            if not documents:
+                raise ValueError("Excel file is empty.")
             return documents
 
         elif file_type in ("txt", "md"):

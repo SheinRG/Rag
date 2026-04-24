@@ -1,5 +1,5 @@
 """
-DocMind AI — Configuration
+Nexus — Configuration
 Loads all environment variables and defines application constants.
 """
 
@@ -34,7 +34,7 @@ SIMILARITY_THRESHOLD = 0.10
 # ─── File Upload ───
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "20"))
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
-ALLOWED_EXTENSIONS = [".pdf", ".txt", ".md", ".csv"]
+ALLOWED_EXTENSIONS = [".pdf", ".txt", ".md", ".csv", ".docx", ".pptx", ".xlsx", ".xls"]
 
 # ─── Storage ───
 STORAGE_BUCKET = "documents"

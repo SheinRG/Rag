@@ -79,12 +79,10 @@ const AiContent = memo(function AiContent({ content, isStreaming }) {
   );
 });
 
-const MessageBubble = memo(function MessageBubble({ message, onReask, isLastMessage }) {
+const MessageBubble = memo(function MessageBubble({ message, onReask, isLastMessage, onSuggestionClick, onAddToNote, onEditMessage }) {
   const isUser = message.role === 'user';
   const isStreaming = useChatStore((s) => s.isStreaming);
   const [isHovered, setIsHovered] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [verification, setVerification] = useState(null);
 
   const isActivelyStreaming = isStreaming && isLastMessage && !isUser && !message.isError;
 
@@ -92,29 +90,14 @@ const MessageBubble = memo(function MessageBubble({ message, onReask, isLastMess
     navigator.clipboard.writeText(message.content);
   };
 
-  const handleVerify = async () => {
-    if (verifying || !message.content || !message.sources) return;
-    setVerifying(true);
-    try {
-      const { data } = await api.post('/media/verify', {
-        answer: message.content,
-        sources: message.sources || [],
-      });
-      setVerification(data);
-    } catch (err) {
-      console.error('Verification failed:', err);
-      setVerification({ score: 0, verdict: 'Verification failed', claims: [] });
-    } finally {
-      setVerifying(false);
-    }
-  };
+
 
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        display: 'flex', flexDirection: 'column', 
+        display: 'flex', flexDirection: 'column',
         alignItems: isUser ? 'flex-end' : 'flex-start',
         marginBottom: '1.5rem',
       }}
@@ -135,11 +118,11 @@ const MessageBubble = memo(function MessageBubble({ message, onReask, isLastMess
         ) : isUser ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             {message.isWebSearch && (
-               <div className="shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center -ml-1.5">
-                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
-                   <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                 </svg>
-               </div>
+              <div className="shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center -ml-1.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+                  <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+              </div>
             )}
             <p style={{ whiteSpace: 'pre-wrap', margin: 0, flex: 1 }}>{message.content}</p>
           </div>
@@ -203,52 +186,49 @@ const MessageBubble = memo(function MessageBubble({ message, onReask, isLastMess
         )}
       </div>
 
-      {/* Verification Results */}
-      {verification && !isUser && (
+      {/* Follow-up Suggestions */}
+      {!isUser && !isActivelyStreaming && message.suggestions && message.suggestions.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0 }}
           style={{
             maxWidth: '85%',
-            marginTop: '0.5rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '16px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            fontSize: '0.78rem',
+            marginTop: '0.6rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.45rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: verification.score >= 80 ? '#dcfce7' :
-                          verification.score >= 50 ? '#fef3c7' :
-                          '#fee2e2',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.7rem', fontWeight: 700,
-              color: verification.score >= 80 ? '#16a34a' :
-                     verification.score >= 50 ? '#d97706' :
-                     '#dc2626',
-            }}>
-              {verification.score}%
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, color: '#1e293b' }}>{verification.verdict}</div>
-              <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{verification.claims?.length || 0} claims checked</div>
-            </div>
-          </div>
-          {verification.claims?.slice(0, 4).map((claim, i) => (
-            <div key={i} style={{
-              display: 'flex', gap: '0.4rem', alignItems: 'flex-start',
-              padding: '0.35rem 0', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none',
-            }}>
-              <span style={{ fontSize: '0.72rem', flexShrink: 0 }}>
-                {claim.status === 'verified' ? '✅' : claim.status === 'inferred' ? '⚠️' : '❌'}
-              </span>
-              <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                {claim.claim}
-              </span>
-            </div>
+          {message.suggestions.map((s, idx) => (
+            <motion.button
+              key={idx}
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSuggestionClick?.(s)}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '20px',
+                padding: '0.4rem 0.85rem',
+                fontSize: '0.78rem',
+                color: '#475569',
+                cursor: 'pointer',
+                fontWeight: 500,
+                letterSpacing: '-0.01em',
+                transition: 'none',
+                lineHeight: 1.4,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+              className="hover:bg-[#f1f5f9] hover:border-[#cbd5e1] hover:text-[#1e293b]"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              {s}
+            </motion.button>
           ))}
         </motion.div>
       )}
@@ -264,32 +244,28 @@ const MessageBubble = memo(function MessageBubble({ message, onReask, isLastMess
                 exit={{ opacity: 0, x: -5 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}
               >
-                 <button
-                    onClick={handleCopy}
-                    className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100/80 rounded-lg transition-all"
-                    title="Copy"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>
-                 </button>
-                 {message.sources && message.sources.length > 0 && (
-                   <button
-                      onClick={handleVerify}
-                      disabled={verifying}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[0.7rem] font-medium transition-all text-emerald-600 hover:bg-emerald-50 border border-emerald-100 ${verifying ? 'opacity-50' : ''}`}
-                      title="Verify citations"
-                    >
-                      {verifying ? (
-                        <motion.svg animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83" /></motion.svg>
-                      ) : (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                      )}
-                      {verifying ? 'Checking...' : 'Verify'}
-                   </button>
-                 )}
+                <button
+                  onClick={handleCopy}
+                  className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100/80 rounded-lg transition-all"
+                  title="Copy"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onAddToNote?.(message.content)}
+                  className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                  title="Add to Note"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </button>
+
               </motion.div>
             )}
           </AnimatePresence>
@@ -308,27 +284,37 @@ const MessageBubble = memo(function MessageBubble({ message, onReask, isLastMess
                   display: 'flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.5rem'
                 }}
               >
-                 <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginRight: '0.6rem', fontWeight: 500 }}>
-                   {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                 </span>
-                 <button 
-                    onClick={() => onReask?.(message.content)} 
-                    className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100/80 rounded-lg transition-all"
-                    title="Regenerate"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                    </svg>
-                 </button>
-                 <button 
-                    onClick={handleCopy}
-                    className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100/80 rounded-lg transition-all"
-                    title="Copy"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>
-                 </button>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginRight: '0.6rem', fontWeight: 500 }}>
+                  {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+                <button
+                  onClick={() => onReask?.(message.content)}
+                  className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100/80 rounded-lg transition-all"
+                  title="Regenerate"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100/80 rounded-lg transition-all"
+                  title="Copy"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onEditMessage?.(message.content)}
+                  className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100/80 rounded-lg transition-all"
+                  title="Edit message"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

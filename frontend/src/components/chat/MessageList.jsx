@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 import DocumentOverview from '../documents/DocumentOverview';
 
-export default function MessageList({ messages, onReask, activeDoc }) {
+export default function MessageList({ messages, onReask, activeDoc, onSuggestionClick, onAddToNote, onEditMessage }) {
   const prevLenRef = useRef(messages.length);
   const containerRef = useRef(null);
 
@@ -63,6 +63,9 @@ export default function MessageList({ messages, onReask, activeDoc }) {
           message={msg}
           onReask={msg.role === 'user' ? onReask : undefined}
           isLastMessage={i === messages.length - 1}
+          onSuggestionClick={onSuggestionClick}
+          onAddToNote={onAddToNote}
+          onEditMessage={onEditMessage}
         />
       ))}
     </div>

@@ -6,10 +6,11 @@ import useChatStore from '../../store/chatStore';
 import useDocumentStore from '../../store/documentStore';
 import { streamPost } from '../../api/client';
 
-export default function ChatPanel({ showWebSearch, onCloseWebSearch, initialWebSearchQuery = '' }) {
+export default function ChatPanel({ showWebSearch, onCloseWebSearch, initialWebSearchQuery = '', onAddToNote }) {
   const { messages, isStreaming, sendMessage, activeDocumentId } = useChatStore();
   const { documents } = useDocumentStore();
   const [webSearching, setWebSearching] = useState(false);
+  const [editValue, setEditValue] = useState('');
 
   const readyDocs = documents.filter(d => d.status === 'ready');
   const hasChunks = readyDocs.some(d => d.num_chunks > 0);
@@ -30,7 +31,12 @@ export default function ChatPanel({ showWebSearch, onCloseWebSearch, initialWebS
 
     setWebSearching(true);
     try {
-      const stream = await streamPost('/search/web', { query });
+      const msgsForHistory = addMsg.messages.slice(0, -2).map(m => ({ role: m.role, content: m.content })).slice(-5);
+      const stream = await streamPost('/search/web', { 
+        query,
+        history: msgsForHistory,
+        document_id: activeDocumentId || null
+      });
       if (!stream) throw new Error('No stream');
 
       const reader = stream.getReader();
@@ -115,10 +121,25 @@ export default function ChatPanel({ showWebSearch, onCloseWebSearch, initialWebS
         boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 8px 32px 0 rgba(0, 0, 0, 0.05)',
       }}
     >
-      <MessageList messages={messages} onReask={handleReask} activeDoc={readyDocs.find(d => d.id === activeDocumentId)} />
+      <MessageList 
+        messages={messages} 
+        onReask={handleReask} 
+        activeDoc={readyDocs.find(d => d.id === activeDocumentId)} 
+        onSuggestionClick={sendMessage} 
+        onAddToNote={onAddToNote}
+        onEditMessage={(content) => setEditValue(content)}
+      />
       <ChatInput
-        onSend={sendMessage}
+        onSend={(question, useWebSearch) => {
+          if (useWebSearch) {
+            handleWebSearch(question);
+          } else {
+            sendMessage(question);
+          }
+        }}
         disabled={isStreaming}
+        editValue={editValue}
+        onClearEdit={() => setEditValue('')}
       />
     </div>
   );

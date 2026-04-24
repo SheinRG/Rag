@@ -1,5 +1,5 @@
 """
-DocMind AI — LLM Module
+Nexus — LLM Module
 Groq API integration with prompt building and SSE streaming.
 """
 
@@ -31,7 +31,7 @@ def build_system_prompt(chunks: List[dict]) -> str:
         else "No document context available."
     )
 
-    prompt = f"""You are DocMind AI, a highly intelligent and collaborative research assistant (similar to NotebookLM). Your goal is to help the user understand, synthesize, and explore their uploaded documents.
+    prompt = f"""You are Nexus, a highly intelligent and collaborative research assistant (similar to NotebookLM). Your goal is to help the user understand, synthesize, and explore their uploaded documents.
 
 Guidelines for your response:
 1. Speak naturally and conversationally as a helpful research partner. Do not sound like a rigid robot.
@@ -48,7 +48,7 @@ Guidelines for your response:
 
 
 async def ask_stream(
-    question: str, user_id: str, document_id: str = None
+    question: str, user_id: str, document_id: str = None, notebook_id: str = None
 ) -> AsyncGenerator[str, None]:
     """
     Main streaming Q&A function.
@@ -57,7 +57,7 @@ async def ask_stream(
     """
     try:
         # Step 1: Retrieve relevant chunks
-        chunks = retrieve(question, user_id, document_id=document_id)
+        chunks = retrieve(question, user_id, document_id=document_id, notebook_id=notebook_id)
 
         # Step 3: Build prompt
         system_prompt = build_system_prompt(chunks)
@@ -90,7 +90,33 @@ async def ask_stream(
         formatted_sources = [{"name": k, "chunks": v} for k, v in sources_map.items()]
         yield f"data: {json.dumps({'type': 'sources', 'content': formatted_sources})}\n\n"
 
-        # Step 6: Send done signal
+        # Step 6: Generate follow-up suggestions
+        try:
+            suggestion_prompt = f"""Based on the user's question and the document context provided, generate exactly 3 short follow-up questions the user might want to ask next. 
+These should be directly related to the document content and the conversation topic.
+Keep each question concise (under 12 words).
+
+User's question: {question}
+
+Respond ONLY with a JSON array of 3 strings, nothing else. Example: ["Question 1?", "Question 2?", "Question 3?"]"""
+
+            suggestion_resp = client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": "You generate follow-up research questions. Respond ONLY with a valid JSON array of strings."},
+                    {"role": "user", "content": suggestion_prompt},
+                ],
+                max_tokens=150,
+                temperature=0.6,
+            )
+            raw = suggestion_resp.choices[0].message.content.strip()
+            suggestions = json.loads(raw)
+            if isinstance(suggestions, list) and len(suggestions) > 0:
+                yield f"data: {json.dumps({'type': 'suggestions', 'content': suggestions[:3]})}\n\n"
+        except Exception as e:
+            logger.warning(f"Failed to generate suggestions: {e}")
+
+        # Step 7: Send done signal
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     except Exception as e:

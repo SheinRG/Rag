@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../api/client';
+import useChatStore from '../../store/chatStore';
 import QuizModal from './QuizModal';
 import SummaryModal from './SummaryModal';
 import FlashcardsModal from './FlashcardsModal';
 import MindMapModal from './MindMapModal';
 import ResearchReportModal from './ResearchReportModal';
+import KeyTopics from './KeyTopics';
 
 const studioFeatures = [
   {
@@ -32,8 +34,8 @@ const studioFeatures = [
         <line x1="10" y1="9" x2="8" y2="9" />
       </svg>
     ),
-    title: 'Reports',
-    color: '#FDF7E6',
+    title: 'Quick Summary',
+    color: '#FFF7ED',
     textColor: '#D97706'
   },
   {
@@ -89,12 +91,26 @@ const studioFeatures = [
     color: '#EDE9FE',
     textColor: '#7C3AED'
   },
+  {
+    id: 'synthesize',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
+        <path d="M15 9h-6"/>
+        <path d="M15 13h-6"/>
+      </svg>
+    ),
+    title: 'Notebook Synthesis',
+    color: '#ECFDF5',
+    textColor: '#10B981'
+  },
 ];
 
-export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
+export default function StudioPanel({ isOpen, onToggle, activeDocumentId, notebookId }) {
   const [activeModal, setActiveModal] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [loadingFeature, setLoadingFeature] = useState(null);
+  const sendMessage = useChatStore((s) => s.sendMessage);
 
   const handleFeatureClick = async (feature) => {
     if (feature.comingSoon) return;
@@ -107,14 +123,31 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
 
     setLoadingFeature(feature.id);
     try {
-      const { data } = await api.post(`/studio/${feature.id}`, {
-        document_id: activeDocumentId || null,
-      });
-      setModalData(data);
-      setActiveModal(feature.id);
+      let endpoint = `/studio/${feature.id}`;
+      let payload = { document_id: activeDocumentId || null };
+
+      if (feature.id === 'synthesize') {
+        if (!notebookId) throw new Error("Please select a notebook first.");
+        endpoint = `/notebooks/${notebookId}/synthesize`;
+        payload = {};
+      }
+
+      const { data } = await api.post(endpoint, payload);
+      
+      // Map synthesize output to summary data structure so we can reuse the modal
+      if (feature.id === 'synthesize') {
+        setModalData({ summary: data.report, type: 'dashboard' });
+        setActiveModal('summary');
+      } else if (feature.id === 'summary') {
+        setModalData({ ...data, type: 'summary' });
+        setActiveModal('summary');
+      } else {
+        setModalData(data);
+        setActiveModal(feature.id);
+      }
     } catch (err) {
       console.error(`Studio ${feature.id} failed:`, err);
-      alert(err.response?.data?.detail || 'Failed to generate. Make sure you have uploaded documents.');
+      alert(err.response?.data?.detail || err.message || 'Failed to generate. Make sure you have uploaded documents.');
     } finally {
       setLoadingFeature(null);
     }
@@ -127,7 +160,11 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
           <QuizModal data={modalData} onClose={() => setActiveModal(null)} />
         )}
         {activeModal === 'summary' && modalData && (
-          <SummaryModal data={modalData} onClose={() => setActiveModal(null)} />
+          <SummaryModal 
+            data={modalData} 
+            type={modalData.type} 
+            onClose={() => setActiveModal(null)} 
+          />
         )}
         {activeModal === 'flashcards' && modalData && (
           <FlashcardsModal data={modalData} onClose={() => setActiveModal(null)} />
@@ -204,6 +241,12 @@ export default function StudioPanel({ isOpen, onToggle, activeDocumentId }) {
         </button>
       </div>
       <div className="flex-1 overflow-auto p-4 flex flex-col gap-4">
+        {/* Key Topics — Study Guide */}
+        <KeyTopics
+          activeDocumentId={activeDocumentId}
+          onTopicClick={sendMessage}
+        />
+
         <div className="flex flex-col gap-3">
           {studioFeatures.map((feature, index) => (
             <motion.button

@@ -1,5 +1,5 @@
 """
-DocMind AI — Database & Embedder Initialization
+Nexus — Database & Embedder Initialization
 Initializes the Supabase client and SentenceTransformer model once.
 """
 

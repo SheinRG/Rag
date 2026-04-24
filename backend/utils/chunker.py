@@ -1,5 +1,5 @@
 """
-DocMind AI — Chunker
+Nexus — Chunker
 Text chunking and embedding logic (standalone, used by ingest.py).
 """
 

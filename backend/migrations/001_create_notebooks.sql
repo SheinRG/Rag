@@ -1,5 +1,5 @@
 -- ========================================
--- DocMind AI — Notebooks Migration
+-- Nexus — Notebooks Migration
 -- Run this in Supabase SQL Editor
 -- ========================================
 

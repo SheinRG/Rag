@@ -1,5 +1,5 @@
 """
-DocMind AI — File Handler
+Nexus — File Handler
 Validates uploaded files (extension, size).
 """
 

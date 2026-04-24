@@ -1,5 +1,5 @@
 """
-DocMind AI — FastAPI Application
+Nexus — FastAPI Application
 Main app assembly with middleware, routers, and startup checks.
 """
 
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Verify external connections on startup."""
-    logger.info("DocMind AI starting up...")
+    logger.info("Nexus starting up...")
 
     # Verify Supabase connection
     try:
@@ -59,13 +59,13 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    logger.info("DocMind AI shutting down.")
+    logger.info("Nexus shutting down.")
 
 
 # ─── App ───
 
 app = FastAPI(
-    title="DocMind AI API",
+    title="Nexus API",
     version="1.0.0",
     description="Production RAG Document Intelligence API",
     lifespan=lifespan,
@@ -99,4 +99,4 @@ app.include_router(media_router, prefix="/api/media")
 @app.get("/health", tags=["System"])
 async def health():
     """Health check endpoint."""
-    return {"status": "ok", "version": "1.0.0", "service": "DocMind AI"}
+    return {"status": "ok", "version": "1.0.0", "service": "Nexus"}

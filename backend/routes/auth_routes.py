@@ -1,5 +1,5 @@
 """
-DocMind AI — Auth Routes
+Nexus — Auth Routes
 Wraps Supabase Auth for signup, login, and user info.
 """
 

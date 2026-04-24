@@ -1,5 +1,5 @@
 """
-DocMind AI — Query Routes
+Nexus — Query Routes
 Streaming Q&A endpoint via SSE.
 """
 
@@ -16,6 +16,7 @@ from pydantic import BaseModel
 class AskRequestWithDoc(BaseModel):
     question: str
     document_id: str | None = None
+    notebook_id: str | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ async def ask_stream_endpoint(
         )
 
     return StreamingResponse(
-        ask_stream(body.question, str(user.id), document_id=body.document_id),
+        ask_stream(body.question, str(user.id), document_id=body.document_id, notebook_id=body.notebook_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

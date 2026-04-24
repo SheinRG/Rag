@@ -312,7 +312,7 @@ export default function NotebooksPage() {
         }}
       >
         <Link to="/" className="no-underline">
-          <span style={{ fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-0.04em', color: '#111' }}>DocMind AI</span>
+          <span style={{ fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-0.04em', color: '#111' }}>Nexus</span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>{user?.email}</span>

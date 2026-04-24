@@ -27,6 +27,13 @@ export default function DashboardPage() {
   const [showWebSearch, setShowWebSearch] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(true);
   const [studioOpen, setStudioOpen] = useState(true);
+  const [addNoteTrigger, setAddNoteTrigger] = useState(0);
+  const [notePrefill, setNotePrefill] = useState('');
+
+  const handleAddToNote = (content) => {
+    setNotePrefill(content);
+    setAddNoteTrigger(prev => prev + 1);
+  };
   const activeDocumentId = useChatStore((s) => s.activeDocumentId);
   const switchNotebook = useChatStore((s) => s.switchNotebook);
   const { activeNotebook, setActiveNotebook, createNotebook } = useNotebookStore();
@@ -74,44 +81,56 @@ export default function DashboardPage() {
       <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[60%] rounded-full bg-blue-500/15 blur-[160px] pointer-events-none z-0" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40%] h-[40%] rounded-full bg-indigo-400/10 blur-[140px] pointer-events-none z-0" />
 
-      ``    {/* Floating Header Elements (Ultra Minimal) */}
+      {/* Floating Header Elements (Ultra Minimal) */}
       {activeNotebook && (
-        <>
+        <motion.div 
+          className="absolute top-0 left-0 right-0 h-[42px] px-3 flex items-center justify-between z-20"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           {/* Top Left: Notebook Title Only */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="absolute top-4 left-6 z-20 flex items-center cursor-pointer"
+          <div
+            className="flex items-center cursor-pointer group"
             onClick={() => navigate('/notebooks')}
+            title="Back to Notebooks"
           >
-            <span className="text-[#1f2937] text-[1.1rem] font-medium tracking-tight hover:opacity-70 transition-opacity">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-gray-400 group-hover:text-black transition-colors"><path d="m15 18-6-6 6-6"/></svg>
+            <span className="text-[#1f2937] text-[1.05rem] font-semibold tracking-tight group-hover:opacity-70 transition-opacity">
               {activeNotebook.title}
             </span>
-          </motion.div>
+          </div>
 
-          {/* Top Right: Create Button Only */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="absolute top-2 right-6 z-20 flex items-center"
-          >
+          {/* Top Right: Create Button + Add Note */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAddNoteTrigger(t => t + 1)}
+              className="flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white px-3.5 py-[5.5px] rounded-full font-medium text-[0.8rem] transition-colors shadow-sm"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              Add note
+            </button>
             <button
               onClick={handleCreateNotebook}
-              className="flex items-center gap-2 bg-black hover:bg-neutral-800 text-white px-4 py-[6px] rounded-full font-medium text-[0.85rem] transition-colors shadow-sm"
+              className="flex items-center gap-2 bg-black hover:bg-neutral-800 text-white px-3.5 py-[5.5px] rounded-full font-medium text-[0.8rem] transition-colors shadow-sm"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               Create notebook
             </button>
-          </motion.div>
-        </>
+          </div>
+        </motion.div>
       )}
 
       {/* Main layout — explicit height so children can stretch */}
       <div
         className="flex gap-3 px-3 relative z-10"
         style={{
-          height: activeNotebook ? 'calc(100vh - 60px)' : 'calc(100vh - 24px)',
-          marginTop: activeNotebook ? '52px' : '12px',
+          height: activeNotebook ? 'calc(100vh - 50px)' : 'calc(100vh - 24px)',
+          marginTop: activeNotebook ? '42px' : '12px',
         }}
       >
         {/* Left Panel: Sources */}
@@ -126,6 +145,8 @@ export default function DashboardPage() {
             onToggle={() => setSourcesOpen(!sourcesOpen)}
             onWebSearch={(query) => { setWebSearchQuery(query); setShowWebSearch(true); }}
             notebookId={notebookId}
+            addNoteTrigger={addNoteTrigger}
+            notePrefill={notePrefill}
           />
         </motion.div>
 
@@ -135,6 +156,7 @@ export default function DashboardPage() {
             showWebSearch={showWebSearch}
             initialWebSearchQuery={webSearchQuery}
             onCloseWebSearch={() => { setShowWebSearch(false); setWebSearchQuery(''); }}
+            onAddToNote={handleAddToNote}
           />
         </div>
 
@@ -149,6 +171,7 @@ export default function DashboardPage() {
             isOpen={studioOpen}
             onToggle={() => setStudioOpen(!studioOpen)}
             activeDocumentId={activeDocumentId}
+            notebookId={notebookId}
             onWebSearch={() => setShowWebSearch(true)}
           />
         </motion.div>
