@@ -4,6 +4,7 @@ supabase
 groq
 langchain-text-splitters
 PyMuPDF
+fastembed==0.2.6
 python-multipart
 python-dotenv
 pydantic[email]
