@@ -195,7 +195,7 @@ export default function LandingPage() {
                 className="mb-6 text-black"
                 style={{ fontFamily: '"Rubik", sans-serif', fontWeight: 500, fontSize: 'clamp(3rem, 6vw, 6.5rem)', letterSpacing: '-0.03em', lineHeight: '1.0', textShadow: '1px 1px 2px rgba(0,0,0,0.05), 2px 2px 5px rgba(0,0,0,0.1), 3px 3px 10px rgba(0,0,0,0.1), 4px 4px 20px rgba(0,0,0,0.1)' }}
               >
-                Turn documents into<br />dialogue.
+                Turn documents into<br />dialogue
               </motion.h1>
 
               {/* Subheading */}
