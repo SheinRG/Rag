@@ -23,13 +23,14 @@ class FastEmbedWrapper:
         name = f"sentence-transformers/{model_name}" if "sentence" not in model_name else model_name
         self.model = TextEmbedding(model_name=name)
         
-    def encode(self, texts):
+    def encode(self, texts, batch_size=256, **kwargs):
         if isinstance(texts, str):
             texts = [texts]
+        import numpy as np
         # TextEmbedding.embed returns an iterable of numpy arrays
-        # return a list of lists/numpy arrays that match sentence-transformers output
-        embeddings = list(self.model.embed(texts))
-        return embeddings
+        # We return a numpy array so .tolist() calls won't crash
+        embeddings = list(self.model.embed(texts, batch_size=batch_size))
+        return np.array(embeddings)
 
 embedder = FastEmbedWrapper(EMBED_MODEL)
 logger.info("Embedding model loaded successfully.")
