@@ -1,9 +1,11 @@
 """
 Nexus — Document Ingestion Pipeline
 Complete pipeline: download → parse → chunk → embed → store.
+Memory-optimised for Render free tier (512 MB RAM).
 """
 
 import os
+import gc
 import logging
 import tempfile
 from typing import List
@@ -11,9 +13,8 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from database import supabase
+from database import supabase, embedder
 from config import STORAGE_BUCKET, CHUNK_SIZE, CHUNK_OVERLAP
-from database import embedder
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,6 @@ def download_from_storage(storage_path: str) -> str:
         logger.error(f"Failed to download from storage: {e}")
         raise
 
-
-from langchain_core.documents import Document
 
 def parse_document(file_path: str, file_type: str) -> List[Document]:
     """Parse a document file into LangChain Document objects."""
@@ -146,51 +145,6 @@ def chunk_documents(documents: List[Document]) -> List[Document]:
     return chunks
 
 
-def embed_chunks(chunks: List[Document]) -> List[List[float]]:
-    """Generate embeddings for all chunks."""
-    texts = [chunk.page_content for chunk in chunks]
-    embeddings = [e.tolist() for e in list(embedder.embed(texts, batch_size=32))]
-    logger.info(f"Generated {len(embeddings)} embeddings.")
-    return embeddings
-
-
-def store_chunks(
-    chunks: List[Document],
-    embeddings: List[List[float]],
-    document_id: str,
-    user_id: str,
-):
-    """Store chunks and embeddings in the database, then update document status."""
-    try:
-        rows = []
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-            rows.append({
-                "document_id": document_id,
-                "user_id": user_id,
-                "content": chunk.page_content,
-                "embedding": embedding,
-                "chunk_index": i,
-            })
-
-        # Insert in batches of 100
-        batch_size = 100
-        for i in range(0, len(rows), batch_size):
-            batch = rows[i : i + batch_size]
-            supabase.table("chunks").insert(batch).execute()
-
-        # Update document status to ready
-        supabase.table("documents").update({
-            "status": "ready",
-            "num_chunks": len(chunks),
-        }).eq("id", document_id).execute()
-
-        logger.info(f"Stored {len(chunks)} chunks for document {document_id}.")
-
-    except Exception as e:
-        logger.error(f"Failed to store chunks: {e}")
-        raise
-
-
 def run_ingestion(
     document_id: str,
     storage_path: str,
@@ -199,6 +153,7 @@ def run_ingestion(
 ):
     """
     Orchestrates the full ingestion pipeline.
+    Memory-optimised: embeds and stores in small batches to stay under 512 MB.
     Runs as a background task — errors must update DB, never crash silently.
     """
     local_path = None
@@ -218,16 +173,59 @@ def run_ingestion(
         # Step 3: Chunk documents
         chunks = chunk_documents(documents)
 
+        # Free the parsed documents from memory immediately
+        del documents
+        gc.collect()
+
         if not chunks:
             raise ValueError("Document produced no text chunks after splitting.")
 
-        # Step 4: Embed chunks
-        embeddings = embed_chunks(chunks)
+        logger.info(f"Processing {len(chunks)} chunks for document {document_id}")
 
-        # Step 5: Store chunks + update status
-        store_chunks(chunks, embeddings, document_id, user_id)
+        # Step 4 + 5: Embed and store in small batches (memory-safe)
+        # Process 50 chunks at a time to keep RAM usage low on Render free tier
+        BATCH = 50
+        total_stored = 0
 
-        logger.info(f"Ingestion complete for document {document_id}: {len(chunks)} chunks.")
+        for batch_start in range(0, len(chunks), BATCH):
+            batch_chunks = chunks[batch_start : batch_start + BATCH]
+            batch_texts = [c.page_content for c in batch_chunks]
+
+            # Embed this small batch
+            batch_embeddings = [e.tolist() for e in embedder.embed(batch_texts)]
+
+            # Build rows for DB insertion
+            rows = []
+            for i, (chunk, embedding) in enumerate(zip(batch_chunks, batch_embeddings)):
+                rows.append({
+                    "document_id": document_id,
+                    "user_id": user_id,
+                    "content": chunk.page_content,
+                    "embedding": embedding,
+                    "chunk_index": batch_start + i,
+                })
+
+            # Insert this batch into Supabase
+            supabase.table("chunks").insert(rows).execute()
+            total_stored += len(rows)
+
+            logger.info(
+                f"Batch {batch_start // BATCH + 1}: "
+                f"embedded + stored {len(rows)} chunks "
+                f"({total_stored}/{len(chunks)} total)"
+            )
+
+            # Free batch memory
+            del batch_chunks, batch_texts, batch_embeddings, rows
+            gc.collect()
+
+        # Update document status to ready
+        supabase.table("documents").update({
+            "status": "ready",
+            "num_chunks": total_stored,
+        }).eq("id", document_id).execute()
+
+        logger.info(f"Ingestion complete for document {document_id}: {total_stored} chunks.")
 
     except Exception as e:
         logger.error(f"Ingestion failed for document {document_id}: {e}")
