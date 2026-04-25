@@ -31,6 +31,7 @@ class GeminiEmbedder:
             texts = [texts]
         
         all_embeddings = []
+        import time
         # Gemini allows up to 100 requests per batchEmbedContents call
         for i in range(0, len(texts), 100):
             batch_texts = texts[i:i+100]
@@ -43,13 +44,22 @@ class GeminiEmbedder:
                 for text in batch_texts
             ]
             
-            with httpx.Client() as client:
-                response = client.post(self.url, json={"requests": requests}, timeout=60.0)
-                response.raise_for_status()
-                data = response.json()
-                
-                for emb in data.get("embeddings", []):
-                    all_embeddings.append(emb["values"])
+            max_retries = 5
+            for attempt in range(max_retries):
+                with httpx.Client() as client:
+                    response = client.post(self.url, json={"requests": requests}, timeout=60.0)
+                    if response.status_code == 429:
+                        if attempt < max_retries - 1:
+                            sleep_time = (2 ** attempt) * 2  # 2s, 4s, 8s, 16s...
+                            logger.warning(f"Gemini Rate Limit hit. Retrying in {sleep_time}s...")
+                            time.sleep(sleep_time)
+                            continue
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    for emb in data.get("embeddings", []):
+                        all_embeddings.append(emb["values"])
+                    break # Break retry loop on success
                     
         return np.array(all_embeddings)
 
