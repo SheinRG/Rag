@@ -16,54 +16,7 @@ import os
 import httpx
 import numpy as np
 
-# ─── Embedding Model (Gemini API - Lightning Fast) ───
-class GeminiEmbedder:
-    def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY", "")
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:batchEmbedContents?key={self.api_key}"
-
-    def encode(self, texts, batch_size=100, **kwargs):
-        if not self.api_key:
-            logger.error("GEMINI_API_KEY is not set!")
-            raise ValueError("GEMINI_API_KEY is missing. Add it to .env")
-
-        if isinstance(texts, str):
-            texts = [texts]
-        
-        all_embeddings = []
-        import time
-        # Gemini allows up to 100 requests per batchEmbedContents call
-        for i in range(0, len(texts), 100):
-            batch_texts = texts[i:i+100]
-            requests = [
-                {
-                    "model": "models/gemini-embedding-2",
-                    "content": {"parts": [{"text": text}]},
-                    "outputDimensionality": 768
-                }
-                for text in batch_texts
-            ]
-            
-            # Pace requests to NEVER exceed Google's 15 Requests Per Minute limit (1 request every 4 seconds)
-            time.sleep(4)
-            
-            max_retries = 3
-            for attempt in range(max_retries):
-                with httpx.Client() as client:
-                    response = client.post(self.url, json={"requests": requests}, timeout=60.0)
-                    if response.status_code == 429 and attempt < max_retries - 1:
-                        logger.warning(f"Rate limited. Sleeping 30s...")
-                        time.sleep(30)
-                        continue
-                    
-                    response.raise_for_status()
-                    data = response.json()
-                    
-                    for emb in data.get("embeddings", []):
-                        all_embeddings.append(emb["values"])
-                    break
-                    
-        return np.array(all_embeddings)
-
-embedder = GeminiEmbedder()
-logger.info("Gemini Embedding API loaded successfully.")
+# ─── Embedding Model (Local - FastEmbed) ───
+from fastembed import TextEmbedding
+embedder = TextEmbedding(model_name="BAAI/bge-small-en-v1.5", threads=2)
+logger.info("Local Embedding Model loaded successfully.")
