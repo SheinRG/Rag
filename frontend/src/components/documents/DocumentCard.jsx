@@ -175,6 +175,12 @@ return (
             <span className="text-[0.65rem] text-gray-400 font-medium">• {doc.num_chunks} chunks</span>
           )}
         </div>
+        {doc.status === 'processing' && doc.file_size > 1024 * 1024 && (
+          <p className="text-[0.65rem] text-amber-600 mt-1.5 mb-0 font-medium flex items-start gap-1.5 leading-tight">
+            <svg className="shrink-0 mt-[1.5px]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            Large file detected. AI chunking and embedding may take a few minutes.
+          </p>
+        )}
       </div>
 
       <div className="relative" ref={menuRef}>
