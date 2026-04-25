@@ -22,9 +22,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 class GeminiEmbedder:
     """
-    Embedding via Google Gemini API.
+    Embedding via Google Gemini API (text-embedding-004).
     Uses batchEmbedContents for efficiency.
     Matches FastEmbed's .embed() generator interface so all callers work unchanged.
+    text-embedding-004 has 1500 RPM (vs 15 RPM for gemini-embedding-2) — much faster.
     """
 
     def __init__(self):
@@ -33,15 +34,15 @@ class GeminiEmbedder:
             logger.warning("GEMINI_API_KEY is not set!")
         self.url = (
             "https://generativelanguage.googleapis.com/v1beta/"
-            f"models/gemini-embedding-2:batchEmbedContents?key={self.api_key}"
+            f"models/text-embedding-004:batchEmbedContents?key={self.api_key}"
         )
         self._last_call_time = 0.0
 
     def embed(self, texts, batch_size=100, **kwargs):
         """
         Yield numpy embeddings one-by-one (generator), matching FastEmbed's interface.
-        Internally batches up to 100 texts per API call (Gemini max).
-        Rate-limits to stay safely under 15 RPM free-tier quota.
+        Internally batches up to 100 texts per API call.
+        text-embedding-004 has 1500 RPM — can process fast with 5s pacing.
         """
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY is missing. Add it to your .env file.")
@@ -50,9 +51,8 @@ class GeminiEmbedder:
             texts = [texts]
         texts = list(texts)
 
-        # Gemini free tier counts EACH text as 1 request toward 15 RPM limit.
-        # 14 items per call = 14 RPM (safely under 15), with 65s spacing.
-        api_batch = 14
+        # text-embedding-004 has 1500 RPM — batch 100 items with 5s pacing is fine
+        api_batch = 100
         total_batches = (len(texts) + api_batch - 1) // api_batch
 
         for i in range(0, len(texts), api_batch):
@@ -60,19 +60,17 @@ class GeminiEmbedder:
             batch = texts[i : i + api_batch]
             requests_body = [
                 {
-                    "model": "models/gemini-embedding-2",
+                    "model": "models/text-embedding-004",
                     "content": {"parts": [{"text": t}]},
                     "outputDimensionality": 768,
                 }
                 for t in batch
             ]
 
-            # ── Rate-limit: 65s between API calls to stay under 15 RPM ──
+            # ── Rate-limit: 5s between API calls ──
             elapsed = time.time() - self._last_call_time
-            if self._last_call_time > 0 and elapsed < 65:
-                wait_time = 65 - elapsed
-                logger.info(f"Rate-limit pacing: waiting {wait_time:.0f}s before batch {batch_num}/{total_batches}")
-                time.sleep(wait_time)
+            if self._last_call_time > 0 and elapsed < 5:
+                time.sleep(5 - elapsed)
 
             # ── Retry with back-off on 429 ──
             for attempt in range(5):
@@ -113,4 +111,5 @@ class GeminiEmbedder:
 
 
 embedder = GeminiEmbedder()
-logger.info("Gemini Embedding API initialized (zero local memory footprint).")
+logger.info("Gemini text-embedding-004 API initialized (1500 RPM, zero local RAM).")
+
