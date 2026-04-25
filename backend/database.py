@@ -20,7 +20,7 @@ import numpy as np
 class GeminiEmbedder:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY", "")
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={self.api_key}"
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:batchEmbedContents?key={self.api_key}"
 
     def encode(self, texts, batch_size=100, **kwargs):
         if not self.api_key:
@@ -36,8 +36,9 @@ class GeminiEmbedder:
             batch_texts = texts[i:i+100]
             requests = [
                 {
-                    "model": "models/text-embedding-004",
-                    "content": {"parts": [{"text": text}]}
+                    "model": "models/gemini-embedding-2",
+                    "content": {"parts": [{"text": text}]},
+                    "outputDimensionality": 768
                 }
                 for text in batch_texts
             ]
