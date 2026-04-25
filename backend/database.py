@@ -50,9 +50,8 @@ class GeminiEmbedder:
                     response = client.post(self.url, json={"requests": requests}, timeout=60.0)
                     if response.status_code == 429:
                         if attempt < max_retries - 1:
-                            sleep_time = (2 ** attempt) * 2  # 2s, 4s, 8s, 16s...
-                            logger.warning(f"Gemini Rate Limit hit. Retrying in {sleep_time}s...")
-                            time.sleep(sleep_time)
+                            logger.warning(f"Gemini 15 RPM Rate Limit hit on batch {i//100}. Sleeping 60s for quota reset...")
+                            time.sleep(60)
                             continue
                     response.raise_for_status()
                     data = response.json()
