@@ -6,7 +6,6 @@ Initializes the Supabase client and SentenceTransformer model once.
 import logging
 from supabase import create_client, Client
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, EMBED_MODEL
-from fastembed import TextEmbedding
 
 logger = logging.getLogger(__name__)
 
