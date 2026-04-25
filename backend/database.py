@@ -13,24 +13,45 @@ logger = logging.getLogger(__name__)
 # ─── Supabase Client (service role — bypasses RLS) ───
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-# ─── Embedding Model (loaded once, reused everywhere) ───
-logger.info(f"Loading fastembed model: {EMBED_MODEL}")
+import os
+import httpx
+import numpy as np
 
-class FastEmbedWrapper:
-    def __init__(self, model_name):
-        # We prefix with sentence-transformers/ if not already present
-        # but fastembed uses 'sentence-transformers/all-MiniLM-L6-v2'
-        name = f"sentence-transformers/{model_name}" if "sentence" not in model_name else model_name
-        self.model = TextEmbedding(model_name=name)
-        
-    def encode(self, texts, batch_size=256, **kwargs):
+# ─── Embedding Model (Gemini API - Lightning Fast) ───
+class GeminiEmbedder:
+    def __init__(self):
+        self.api_key = os.getenv("GEMINI_API_KEY", "")
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={self.api_key}"
+
+    def encode(self, texts, batch_size=100, **kwargs):
+        if not self.api_key:
+            logger.error("GEMINI_API_KEY is not set!")
+            raise ValueError("GEMINI_API_KEY is missing. Add it to .env")
+
         if isinstance(texts, str):
             texts = [texts]
-        import numpy as np
-        # TextEmbedding.embed returns an iterable of numpy arrays
-        # We return a numpy array so .tolist() calls won't crash
-        embeddings = list(self.model.embed(texts, batch_size=batch_size))
-        return np.array(embeddings)
+        
+        all_embeddings = []
+        # Gemini allows up to 100 requests per batchEmbedContents call
+        for i in range(0, len(texts), 100):
+            batch_texts = texts[i:i+100]
+            requests = [
+                {
+                    "model": "models/text-embedding-004",
+                    "content": {"parts": [{"text": text}]}
+                }
+                for text in batch_texts
+            ]
+            
+            with httpx.Client() as client:
+                response = client.post(self.url, json={"requests": requests}, timeout=60.0)
+                response.raise_for_status()
+                data = response.json()
+                
+                for emb in data.get("embeddings", []):
+                    all_embeddings.append(emb["values"])
+                    
+        return np.array(all_embeddings)
 
-embedder = FastEmbedWrapper(EMBED_MODEL)
-logger.info("Embedding model loaded successfully.")
+embedder = GeminiEmbedder()
+logger.info("Gemini Embedding API loaded successfully.")

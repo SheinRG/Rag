@@ -20,8 +20,8 @@ GROQ_MODEL = "llama-3.1-8b-instant"
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
 # ─── Embeddings ───
-EMBED_MODEL = "all-MiniLM-L6-v2"
-EMBED_DIMENSIONS = 384
+EMBED_MODEL = "models/text-embedding-004"
+EMBED_DIMENSIONS = 768
 
 # ─── Chunking ───
 CHUNK_SIZE = 500
