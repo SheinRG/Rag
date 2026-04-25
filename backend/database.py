@@ -50,10 +50,13 @@ class GeminiEmbedder:
             texts = [texts]
         texts = list(texts)
 
-        # Use Gemini's max batch size (100) regardless of caller's batch_size
-        api_batch = 100
+        # Gemini free tier counts EACH text as 1 request toward 15 RPM limit.
+        # 14 items per call = 14 RPM (safely under 15), with 65s spacing.
+        api_batch = 14
+        total_batches = (len(texts) + api_batch - 1) // api_batch
 
         for i in range(0, len(texts), api_batch):
+            batch_num = i // api_batch + 1
             batch = texts[i : i + api_batch]
             requests_body = [
                 {
@@ -64,10 +67,12 @@ class GeminiEmbedder:
                 for t in batch
             ]
 
-            # ── Rate-limit: ensure >= 5s between API calls (max 12 calls/min) ──
+            # ── Rate-limit: 65s between API calls to stay under 15 RPM ──
             elapsed = time.time() - self._last_call_time
-            if elapsed < 5:
-                time.sleep(5 - elapsed)
+            if self._last_call_time > 0 and elapsed < 65:
+                wait_time = 65 - elapsed
+                logger.info(f"Rate-limit pacing: waiting {wait_time:.0f}s before batch {batch_num}/{total_batches}")
+                time.sleep(wait_time)
 
             # ── Retry with back-off on 429 ──
             for attempt in range(5):
@@ -82,7 +87,7 @@ class GeminiEmbedder:
                     if resp.status_code == 429:
                         wait = 60 * (attempt + 1)  # 60s, 120s, 180s …
                         logger.warning(
-                            f"Gemini 429 rate-limit on batch {i // api_batch}. "
+                            f"Gemini 429 rate-limit on batch {batch_num}/{total_batches}. "
                             f"Sleeping {wait}s (attempt {attempt + 1}/5)"
                         )
                         time.sleep(wait)
@@ -93,6 +98,8 @@ class GeminiEmbedder:
 
                     for emb in data.get("embeddings", []):
                         yield np.array(emb["values"], dtype=np.float32)
+                    
+                    logger.info(f"Embedded batch {batch_num}/{total_batches} ({len(batch)} items)")
                     break  # success — exit retry loop
 
                 except httpx.HTTPStatusError:
