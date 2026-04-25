@@ -21,9 +21,12 @@ from routes.media_routes import router as media_router
 
 # ─── Logging ───
 logging.basicConfig(
-    level=logging.INFO if ENVIRONMENT == "production" else logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
 )
+# Silence noisy HTTP debug logs (saves RAM + makes real errors visible)
+for noisy in ("httpx", "httpcore", "hpack", "hpack.hpack", "hpack.table"):
+    logging.getLogger(noisy).setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
