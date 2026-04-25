@@ -3,7 +3,7 @@ uvicorn[standard]
 supabase
 groq
 langchain-text-splitters
-pypdf
+PyMuPDF
 python-multipart
 python-dotenv
 pydantic[email]

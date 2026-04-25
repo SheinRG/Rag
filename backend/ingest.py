@@ -8,7 +8,6 @@ import logging
 import tempfile
 from typing import List
 
-from pypdf import PdfReader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -45,19 +44,23 @@ def download_from_storage(storage_path: str) -> str:
         raise
 
 
+from langchain_core.documents import Document
+
 def parse_document(file_path: str, file_type: str) -> List[Document]:
     """Parse a document file into LangChain Document objects."""
     try:
         if file_type == "pdf":
-            reader = PdfReader(file_path)
+            import fitz
+            doc = fitz.open(file_path)
             documents = []
-            for i, page in enumerate(reader.pages):
-                text = page.extract_text() or ""
+            for i, page in enumerate(doc):
+                text = page.get_text() or ""
                 if text.strip():
                     documents.append(Document(
                         page_content=text,
                         metadata={"page": i + 1, "source": file_path}
                     ))
+            doc.close()
             if not documents:
                 raise ValueError("PDF contains no readable text.")
             return documents
