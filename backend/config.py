@@ -24,8 +24,8 @@ EMBED_MODEL = "models/gemini-embedding-2"
 EMBED_DIMENSIONS = 768
 
 # ─── Chunking ───
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 1500
+CHUNK_OVERLAP = 150
 
 # ─── Retrieval ───
 TOP_K = 10
