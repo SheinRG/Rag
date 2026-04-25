@@ -52,8 +52,8 @@ async def lifespan(app: FastAPI):
     # Verify embedding model is loaded
     try:
         from database import embedder
-        test_embed = embedder.encode(["test"])
-        logger.info(f"✅ Embedding model loaded (dim={len(test_embed[0])}).")
+        test_embed = list(embedder.embed(["test"]))[0]
+        logger.info(f"✅ Embedding model loaded (dim={len(test_embed)}).")
     except Exception as e:
         logger.warning(f"⚠️ Embedding model check failed: {e}")
 
