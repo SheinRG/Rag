@@ -153,8 +153,9 @@ def run_ingestion(
 ):
     """
     Orchestrates the full ingestion pipeline.
-    Memory-optimised: embeds and stores in small batches to stay under 512 MB.
-    Runs as a background task — errors must update DB, never crash silently.
+    Ultra memory-safe: for large PDFs, processes 50 pages at a time.
+    Each page-group is parsed → chunked → embedded → stored → freed.
+    This keeps RAM under 512 MB even for 700+ page books.
     """
     local_path = None
 
@@ -164,60 +165,113 @@ def run_ingestion(
         # Step 1: Download from storage
         local_path = download_from_storage(storage_path)
 
-        # Step 2: Parse document
-        documents = parse_document(local_path, file_type)
-
-        if not documents or all(not doc.page_content.strip() for doc in documents):
-            raise ValueError("Document contains no readable text content.")
-
-        # Step 3: Chunk documents
-        chunks = chunk_documents(documents)
-
-        # Free the parsed documents from memory immediately
-        del documents
-        gc.collect()
-
-        if not chunks:
-            raise ValueError("Document produced no text chunks after splitting.")
-
-        logger.info(f"Processing {len(chunks)} chunks for document {document_id}")
-
-        # Step 4 + 5: Embed and store in small batches (memory-safe)
-        # Process 50 chunks at a time to keep RAM usage low on Render free tier
-        BATCH = 50
         total_stored = 0
+        chunk_index = 0
 
-        for batch_start in range(0, len(chunks), BATCH):
-            batch_chunks = chunks[batch_start : batch_start + BATCH]
-            batch_texts = [c.page_content for c in batch_chunks]
+        if file_type == "pdf":
+            # ── STREAMING PDF INGESTION (page-group at a time) ──
+            import fitz
+            pdf_doc = fitz.open(local_path)
+            total_pages = len(pdf_doc)
+            pdf_doc.close()
+            del pdf_doc
+            gc.collect()
 
-            # Embed this small batch
-            batch_embeddings = [e.tolist() for e in embedder.embed(batch_texts)]
+            logger.info(f"PDF has {total_pages} pages. Processing in groups of 50.")
 
-            # Build rows for DB insertion
+            PAGE_GROUP = 50
+            for page_start in range(0, total_pages, PAGE_GROUP):
+                page_end = min(page_start + PAGE_GROUP, total_pages)
+
+                # Parse only this group of pages
+                pdf_doc = fitz.open(local_path)
+                documents = []
+                for i in range(page_start, page_end):
+                    page = pdf_doc[i]
+                    text = page.get_text() or ""
+                    if text.strip():
+                        documents.append(Document(
+                            page_content=text,
+                            metadata={"page": i + 1, "source": local_path}
+                        ))
+                pdf_doc.close()
+                del pdf_doc
+                gc.collect()
+
+                if not documents:
+                    continue
+
+                # Chunk this group
+                chunks = text_splitter.split_documents(documents)
+                del documents
+                gc.collect()
+
+                if not chunks:
+                    continue
+
+                # Embed and store
+                texts = [c.page_content for c in chunks]
+                embeddings = [e.tolist() for e in embedder.embed(texts)]
+
+                rows = []
+                for c, emb in zip(chunks, embeddings):
+                    rows.append({
+                        "document_id": document_id,
+                        "user_id": user_id,
+                        "content": c.page_content,
+                        "embedding": emb,
+                        "chunk_index": chunk_index,
+                    })
+                    chunk_index += 1
+
+                supabase.table("chunks").insert(rows).execute()
+                total_stored += len(rows)
+
+                logger.info(
+                    f"Pages {page_start+1}-{page_end}: "
+                    f"{len(rows)} chunks stored ({total_stored} total)"
+                )
+
+                del chunks, texts, embeddings, rows
+                gc.collect()
+
+        else:
+            # ── NON-PDF FILES (small, process normally) ──
+            documents = parse_document(local_path, file_type)
+
+            if not documents or all(not d.page_content.strip() for d in documents):
+                raise ValueError("Document contains no readable text content.")
+
+            chunks = chunk_documents(documents)
+            del documents
+            gc.collect()
+
+            if not chunks:
+                raise ValueError("Document produced no text chunks after splitting.")
+
+            texts = [c.page_content for c in chunks]
+            embeddings = [e.tolist() for e in embedder.embed(texts)]
+
             rows = []
-            for i, (chunk, embedding) in enumerate(zip(batch_chunks, batch_embeddings)):
+            for i, (c, emb) in enumerate(zip(chunks, embeddings)):
                 rows.append({
                     "document_id": document_id,
                     "user_id": user_id,
-                    "content": chunk.page_content,
-                    "embedding": embedding,
-                    "chunk_index": batch_start + i,
+                    "content": c.page_content,
+                    "embedding": emb,
+                    "chunk_index": i,
                 })
 
-            # Insert this batch into Supabase
-            supabase.table("chunks").insert(rows).execute()
-            total_stored += len(rows)
+            # Insert in batches of 100
+            for b in range(0, len(rows), 100):
+                supabase.table("chunks").insert(rows[b:b+100]).execute()
 
-            logger.info(
-                f"Batch {batch_start // BATCH + 1}: "
-                f"embedded + stored {len(rows)} chunks "
-                f"({total_stored}/{len(chunks)} total)"
-            )
-
-            # Free batch memory
-            del batch_chunks, batch_texts, batch_embeddings, rows
+            total_stored = len(rows)
+            del chunks, texts, embeddings, rows
             gc.collect()
+
+        if total_stored == 0:
+            raise ValueError("Document contains no readable text content.")
 
         # Update document status to ready
         supabase.table("documents").update({
