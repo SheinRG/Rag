@@ -44,21 +44,24 @@ class GeminiEmbedder:
                 for text in batch_texts
             ]
             
-            max_retries = 5
+            # Pace requests to NEVER exceed Google's 15 Requests Per Minute limit (1 request every 4 seconds)
+            time.sleep(4)
+            
+            max_retries = 3
             for attempt in range(max_retries):
                 with httpx.Client() as client:
                     response = client.post(self.url, json={"requests": requests}, timeout=60.0)
-                    if response.status_code == 429:
-                        if attempt < max_retries - 1:
-                            logger.warning(f"Gemini 15 RPM Rate Limit hit on batch {i//100}. Sleeping 60s for quota reset...")
-                            time.sleep(60)
-                            continue
+                    if response.status_code == 429 and attempt < max_retries - 1:
+                        logger.warning(f"Rate limited. Sleeping 30s...")
+                        time.sleep(30)
+                        continue
+                    
                     response.raise_for_status()
                     data = response.json()
                     
                     for emb in data.get("embeddings", []):
                         all_embeddings.append(emb["values"])
-                    break # Break retry loop on success
+                    break
                     
         return np.array(all_embeddings)
 
