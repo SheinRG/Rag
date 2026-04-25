@@ -145,7 +145,7 @@ def run_youtube_ingestion(
 
         # Step 3: Embed
         texts = [f"[{b['timestamp']}] {b['content']}" for b in blocks]
-        embeddings = embedder.encode(texts, batch_size=32, show_progress_bar=False).tolist()
+        embeddings = [e.tolist() for e in list(embedder.embed(texts, batch_size=32))]
 
         # Step 4: Store chunks
         rows = []

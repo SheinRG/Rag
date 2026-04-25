@@ -149,7 +149,7 @@ def chunk_documents(documents: List[Document]) -> List[Document]:
 def embed_chunks(chunks: List[Document]) -> List[List[float]]:
     """Generate embeddings for all chunks."""
     texts = [chunk.page_content for chunk in chunks]
-    embeddings = embedder.encode(texts, batch_size=32, show_progress_bar=False).tolist()
+    embeddings = [e.tolist() for e in list(embedder.embed(texts, batch_size=32))]
     logger.info(f"Generated {len(embeddings)} embeddings.")
     return embeddings
 

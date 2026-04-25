@@ -29,8 +29,8 @@ def retrieve(
     Returns a list of dicts with content, document_id, source name, and similarity score.
     """
     try:
-        # Embed the query
-        query_embedding = embedder.encode([query]).tolist()[0]
+        # Generate embedding for the query
+        query_embedding = list(embedder.embed([query]))[0].tolist()
 
         # Build RPC parameters. If we have a filter, fetch more chunks initially to filter locally.
         candidate_count = 25
