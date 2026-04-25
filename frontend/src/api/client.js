@@ -34,7 +34,7 @@ export default api;
 /**
  * Stream a POST request and return a ReadableStream of SSE events.
  */
-export async function streamPost(path, body) {
+export async function streamPost(path, body, signal) {
   const token = localStorage.getItem('access_token');
   
   const response = await fetch(`${API_URL}/api${path}`, {
@@ -44,6 +44,7 @@ export async function streamPost(path, body) {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
+    signal,
   });
   
   if (!response.ok) {

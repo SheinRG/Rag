@@ -14,12 +14,17 @@ export default function ResearchReportModal({ onClose, activeDocumentIds }) {
 
   const readerRef = useRef(null);
 
+  const abortControllerRef = useRef(null);
+
   const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     if (readerRef.current) {
       readerRef.current.cancel();
-      setIsGenerating(false);
-      setSteps(prev => [...prev, 'Research stopped by user.']);
     }
+    setIsGenerating(false);
+    setSteps(prev => [...prev, 'Research stopped by user.']);
   };
 
   const handleGenerate = async () => {
@@ -30,11 +35,12 @@ export default function ResearchReportModal({ onClose, activeDocumentIds }) {
     setSections([]);
 
     try {
+      abortControllerRef.current = new AbortController();
       const { streamPost } = await import('../../api/client');
       const stream = await streamPost('/media/research-report', {
         prompt: prompt.trim(),
         document_ids: activeDocumentIds || [],
-      });
+      }, abortControllerRef.current.signal);
 
       const reader = stream.getReader();
       readerRef.current = reader;
@@ -75,6 +81,7 @@ export default function ResearchReportModal({ onClose, activeDocumentIds }) {
     } finally {
       setIsGenerating(false);
       readerRef.current = null;
+      abortControllerRef.current = null;
     }
   };
 
