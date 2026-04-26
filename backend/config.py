@@ -20,8 +20,8 @@ GROQ_MODEL = "llama-3.1-8b-instant"
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
 # ─── Embeddings ───
-EMBED_MODEL = "models/gemini-embedding-2"
-EMBED_DIMENSIONS = 768
+EMBED_MODEL = "embed-english-light-v3.0"
+EMBED_DIMENSIONS = 384
 
 # ─── Chunking ───
 CHUNK_SIZE = 2500
