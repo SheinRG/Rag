@@ -13,11 +13,20 @@ export default function QuizModal({ data, onClose }) {
 
   const question = questions[currentQ];
 
+  const getOptionLetter = (opt) => opt.trim().charAt(0).toUpperCase();
+  
+  const getCorrectLetter = (ans) => {
+    if (!ans) return '';
+    const cleaned = ans.trim().toUpperCase();
+    if (cleaned.startsWith('OPTION ')) return cleaned.charAt(7);
+    return cleaned.charAt(0);
+  };
+
   const handleSelect = (optionLetter) => {
     if (showAnswer) return;
     setSelected(optionLetter);
     setShowAnswer(true);
-    if (optionLetter === question.answer) {
+    if (optionLetter === getCorrectLetter(question.answer)) {
       setScore(s => s + 1);
     }
   };
@@ -32,7 +41,7 @@ export default function QuizModal({ data, onClose }) {
     }
   };
 
-  const getOptionLetter = (opt) => opt.charAt(0);
+
 
   return (
     <motion.div
@@ -150,7 +159,7 @@ export default function QuizModal({ data, onClose }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
               {question.options.map((opt) => {
                 const letter = getOptionLetter(opt);
-                const isCorrect = letter === question.answer;
+                const isCorrect = letter === getCorrectLetter(question.answer);
                 const isSelected = letter === selected;
 
                 let bg = 'rgba(255, 255, 255, 0.6)';
