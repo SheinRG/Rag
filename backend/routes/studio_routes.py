@@ -51,8 +51,13 @@ def _get_all_chunks(user_id: str, limit: int = 20) -> list[dict]:
     return result.data or []
 
 
-def _build_context(chunks: list[dict]) -> str:
-    return "\n\n".join(c["content"] for c in chunks) if chunks else "No content available."
+def _build_context(chunks: list[dict], max_chars: int = 14000) -> str:
+    if not chunks:
+        return "No content available."
+    text = "\n\n".join(c["content"] for c in chunks)
+    if len(text) > max_chars:
+        return text[:max_chars] + "\n\n...[Content Truncated to stay within AI limits]..."
+    return text
 
 
 def _generate(system: str, user_msg: str, max_tokens: int = 1500) -> str:
