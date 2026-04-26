@@ -78,10 +78,10 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="w-full font-sans overflow-hidden bg-[#D4D4D4] relative"
+      className="w-full font-sans overflow-hidden bg-[#D4D4D4] relative flex flex-col"
       style={{
         fontFamily: '"Inter", "system-ui", sans-serif',
-        height: '100vh',
+        height: '100dvh',
       }}
     >
       {/* Background Mesh Orbs — more intense for glass contrast */}
@@ -136,7 +136,7 @@ export default function DashboardPage() {
       )}
 
       {/* Mobile Tab Bar */}
-      <div className="md:hidden px-3 mt-14 mb-2 relative z-20">
+      <div className="md:hidden px-3 mt-[42px] pt-3 pb-1 relative z-20 flex-shrink-0">
         <div className="flex bg-white/50 backdrop-blur-md rounded-full p-1 shadow-sm border border-white/60">
           {['sources', 'chat', 'studio'].map((tab) => (
             <button
@@ -154,12 +154,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Main layout — explicit height so children can stretch */}
+      {/* Main layout — flex-1 min-h-0 lets it fill remaining vertical space automatically */}
       <div
-        className="flex gap-3 px-3 relative z-10"
+        className="flex gap-3 px-3 relative z-10 flex-1 min-h-0 pb-3"
         style={{
-          height: activeNotebook ? 'calc(100vh - 50px)' : 'calc(100vh - 24px)',
-          marginTop: activeNotebook ? '42px' : '12px',
+          marginTop: isMobile ? '0' : (activeNotebook ? '42px' : '12px'),
         }}
       >
         {/* Left Panel: Sources */}

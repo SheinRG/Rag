@@ -14,7 +14,7 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
 # ─── Groq ───
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = "llama3-8b-8192"
+GROQ_MODEL = "llama-3.1-8b-instant"
 
 # ─── Tavily ───
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")

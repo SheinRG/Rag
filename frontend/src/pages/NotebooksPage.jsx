@@ -302,15 +302,7 @@ export default function NotebooksPage() {
       <div className="absolute bottom-1/4 left-0 w-[40%] h-[40%] rounded-full bg-purple-400/10 blur-[160px] pointer-events-none z-0" />
 
       {/* Custom Header Bar */}
-      <div
-        className="relative z-20"
-        style={{
-          padding: '1.25rem 2rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
+      <div className="relative z-20 px-5 sm:px-8 py-5 flex items-center justify-between">
         <Link to="/" className="no-underline">
           <span style={{ fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-0.04em', color: '#111' }}>Nexus</span>
         </Link>
@@ -336,21 +328,14 @@ export default function NotebooksPage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-[1200px] mx-auto px-6 pt-6 pb-16">
+      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-16">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 sm:mb-10">
           <div>
-            <h1 style={{
-              margin: 0,
-              fontSize: '2.2rem',
-              fontWeight: 600,
-              color: '#111',
-              fontFamily: '"Rubik", sans-serif',
-              letterSpacing: '-0.02em',
-            }}>
+            <h1 className="m-0 text-3xl sm:text-[2.2rem] font-semibold text-[#111] font-[Rubik] tracking-tight">
               My Notebooks
             </h1>
-            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.95rem', color: '#6b7280', fontWeight: 400 }}>
+            <p className="mt-2 mb-0 text-sm sm:text-[0.95rem] text-gray-500 font-normal">
               Organize your research sessions into focused projects
             </p>
           </div>
@@ -359,21 +344,7 @@ export default function NotebooksPage() {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={handleCreate}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '999px',
-              border: 'none',
-              background: '#111',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
-            }}
+            className="flex items-center justify-center gap-2.5 px-6 py-3 rounded-full bg-[#111] text-white text-sm font-semibold cursor-pointer shadow-[0_4px_15px_rgba(0,0,0,0.15)] w-full sm:w-auto"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -398,11 +369,7 @@ export default function NotebooksPage() {
             <p>Loading your notebooks...</p>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: '1.25rem',
-          }}>
+          <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
             {/* Create New Card */}
             <motion.div
               whileHover={{ scale: 1.02, y: -6 }}

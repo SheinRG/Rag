@@ -7,8 +7,20 @@ const useAuthStore = create((set) => ({
   loading: false,
   error: null,
 
-  loadFromStorage: async () => {
-    // Listen for auth changes automatically from Supabase
+  loadFromStorage: () => {
+    // 1. Sync load immediately from localStorage to prevent router flicker
+    const token = localStorage.getItem('access_token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr) {
+      try {
+        set({ token, user: JSON.parse(userStr) });
+      } catch {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+      }
+    }
+
+    // 2. Listen for auth changes automatically from Supabase
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         const token = session.access_token;
@@ -23,31 +35,20 @@ const useAuthStore = create((set) => ({
       }
     });
 
-    // Try to get initial session in case local storage is stale
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const token = session.access_token;
-      const user = { id: session.user.id, email: session.user.email };
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      set({ token, user });
-    } else {
-      // Fallback to manual local storage check (though session should be reliable)
-      const token = localStorage.getItem('access_token');
-      const userStr = localStorage.getItem('user');
-      if (token && userStr) {
-        try {
-          set({ token, user: JSON.parse(userStr) });
-        } catch {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-        }
+    // 3. Try to get initial session in case local storage is stale
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const token = session.access_token;
+        const user = { id: session.user.id, email: session.user.email };
+        localStorage.setItem('access_token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        set({ token, user });
       } else {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         set({ user: null, token: null });
       }
-    }
+    });
   },
 
   signup: async (email, password) => {
