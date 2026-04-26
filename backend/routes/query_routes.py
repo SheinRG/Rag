@@ -13,10 +13,15 @@ from models.schemas import AskRequest
 from pydantic import BaseModel
 
 
+class Message(BaseModel):
+    role: str
+    content: str
+
 class AskRequestWithDoc(BaseModel):
     question: str
     document_ids: list[str] | None = None
     notebook_id: str | None = None
+    history: list[Message] | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +41,13 @@ async def ask_stream_endpoint(
         )
 
     return StreamingResponse(
-        ask_stream(body.question, str(user.id), document_ids=body.document_ids, notebook_id=body.notebook_id),
+        ask_stream(
+            body.question, 
+            str(user.id), 
+            document_ids=body.document_ids, 
+            notebook_id=body.notebook_id,
+            history=body.history
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

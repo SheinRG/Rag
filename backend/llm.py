@@ -48,7 +48,7 @@ Guidelines for your response:
 
 
 async def ask_stream(
-    question: str, user_id: str, document_ids: list[str] = None, notebook_id: str = None
+    question: str, user_id: str, document_ids: list[str] = None, notebook_id: str = None, history: list = None
 ) -> AsyncGenerator[str, None]:
     """
     Main streaming Q&A function.
@@ -56,19 +56,33 @@ async def ask_stream(
     Optionally filters by a list of document_ids for multi-source chats.
     """
     try:
-        # Step 1: Retrieve relevant chunks
-        chunks = retrieve(question, user_id, document_ids=document_ids, notebook_id=notebook_id)
+        # Step 1: Construct contextual query and retrieve chunks
+        retrieval_query = question
+        if history and len(history) > 0:
+            last_msg = history[-1]
+            last_content = last_msg.get("content", "") if isinstance(last_msg, dict) else getattr(last_msg, "content", "")
+            if len(question.split()) < 15 and last_content:
+                # Append last assistant message to give embedder context
+                retrieval_query = f"{last_content}\n\n{question}"
+
+        chunks = retrieve(retrieval_query, user_id, document_ids=document_ids, notebook_id=notebook_id)
 
         # Step 3: Build prompt
         system_prompt = build_system_prompt(chunks)
 
         # Step 4: Stream from Groq
+        messages = [{"role": "system", "content": system_prompt}]
+        if history:
+            for msg in history:
+                role = msg.get("role", "user") if isinstance(msg, dict) else getattr(msg, "role", "user")
+                content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
+                if content:
+                    messages.append({"role": role, "content": content})
+        messages.append({"role": "user", "content": question})
+
         stream = client.chat.completions.create(
             model=GROQ_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question},
-            ],
+            messages=messages,
             stream=True,
             max_tokens=1024,
             temperature=0.2,

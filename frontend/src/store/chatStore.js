@@ -60,8 +60,13 @@ const useChatStore = create(
       },
 
       sendMessage: async (question) => {
-        const { activeDocumentIds, currentNotebookId } = get();
+        const { activeDocumentIds, currentNotebookId, messages: currentMessages } = get();
         
+        // Extract recent history before adding the new message
+        const historyForApi = currentMessages
+          .slice(-6)
+          .map(m => ({ role: m.role, content: m.content }));
+
         set((state) => ({
           messages: [
             ...state.messages,
@@ -99,7 +104,8 @@ const useChatStore = create(
           const stream = await streamPost('/ask/stream', { 
             question,
             document_ids: activeDocumentIds,
-            notebook_id: currentNotebookId
+            notebook_id: currentNotebookId,
+            history: historyForApi
           });
           
           if (!stream) throw new Error('No stream response');
