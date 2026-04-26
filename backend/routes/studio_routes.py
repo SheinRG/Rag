@@ -14,7 +14,7 @@ from typing import Optional
 from auth_middleware import get_current_user
 from database import supabase
 from config import GROQ_API_KEY, GROQ_MODEL
-from groq import Groq
+from groq import Groq, RateLimitError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Studio"])
@@ -51,7 +51,7 @@ def _get_all_chunks(user_id: str, limit: int = 20) -> list[dict]:
     return result.data or []
 
 
-def _build_context(chunks: list[dict], max_chars: int = 14000) -> str:
+def _build_context(chunks: list[dict], max_chars: int = 8000) -> str:
     if not chunks:
         return "No content available."
     text = "\n\n".join(c["content"] for c in chunks)
@@ -127,6 +127,9 @@ Do NOT include any markdown, code fences, or explanation. ONLY the JSON array.""
         raise HTTPException(status_code=500, detail="Failed to parse topics from AI response")
     except HTTPException:
         raise
+    except RateLimitError as e:
+        logger.warning(f"Groq Rate Limit Exceeded: {e}")
+        raise HTTPException(status_code=429, detail="AI Rate limit exceeded. Please wait 1 minute.")
     except Exception as e:
         logger.error(f"Key topics extraction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -182,6 +185,9 @@ Return ONLY valid JSON, no markdown fences.""",
 
     except HTTPException:
         raise
+    except RateLimitError as e:
+        logger.warning(f"Groq Rate Limit Exceeded: {e}")
+        return {"summary": "AI Rate limit exceeded. Please wait 1 minute.", "suggestions": []}
     except Exception as e:
         logger.error(f"Overview generation failed: {e}")
         return {"summary": "Failed to generate overview.", "suggestions": []}
@@ -223,6 +229,9 @@ No markdown fences. No extra text.""",
 
     except HTTPException:
         raise
+    except RateLimitError as e:
+        logger.warning(f"Groq Rate Limit Exceeded: {e}")
+        raise HTTPException(status_code=429, detail="AI Rate limit exceeded. Please wait 1 minute.")
     except Exception as e:
         logger.error(f"Quiz generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate quiz.")
@@ -256,6 +265,9 @@ Include: Key Themes, Main Points, Important Details, and Conclusions.""",
 
     except HTTPException:
         raise
+    except RateLimitError as e:
+        logger.warning(f"Groq Rate Limit Exceeded: {e}")
+        raise HTTPException(status_code=429, detail="AI Rate limit exceeded. Please wait 1 minute.")
     except Exception as e:
         logger.error(f"Summary generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate summary.")
@@ -297,6 +309,9 @@ No markdown fences. No extra text.""",
 
     except HTTPException:
         raise
+    except RateLimitError as e:
+        logger.warning(f"Groq Rate Limit Exceeded: {e}")
+        raise HTTPException(status_code=429, detail="AI Rate limit exceeded. Please wait 1 minute.")
     except Exception as e:
         logger.error(f"Flashcard generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate flashcards.")
@@ -346,6 +361,9 @@ No markdown fences. No explanation.""",
 
     except HTTPException:
         raise
+    except RateLimitError as e:
+        logger.warning(f"Groq Rate Limit Exceeded: {e}")
+        raise HTTPException(status_code=429, detail="AI Rate limit exceeded. Please wait 1 minute.")
     except Exception as e:
         logger.error(f"Mind map generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate mind map.")

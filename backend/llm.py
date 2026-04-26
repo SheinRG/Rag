@@ -7,7 +7,7 @@ import json
 import logging
 from typing import AsyncGenerator, List
 
-from groq import Groq
+from groq import Groq, RateLimitError
 from config import GROQ_API_KEY, GROQ_MODEL
 from retriever import retrieve
 
@@ -119,7 +119,11 @@ Respond ONLY with a JSON array of 3 strings, nothing else. Example: ["Question 1
         # Step 7: Send done signal
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
+    except RateLimitError as e:
+        logger.warning(f"Groq Rate Limit Exceeded: {e}")
+        yield f"data: {{'type': 'error', 'content': 'You have reached the AI rate limit (too many tokens per minute). Please wait 60 seconds and try again.'}}\n\n"
+        yield f"data: {{'type': 'done'}}\n\n"
     except Exception as e:
         logger.error(f"Streaming failed: {e}")
-        yield f"data: {json.dumps({'type': 'error', 'content': 'An error occurred while generating the answer. Please try again.'})}\n\n"
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        yield f"data: {{'type': 'error', 'content': 'An error occurred while generating the answer. Please try again.'}}\n\n"
+        yield f"data: {{'type': 'done'}}\n\n"

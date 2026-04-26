@@ -28,7 +28,7 @@ CHUNK_SIZE = 2500
 CHUNK_OVERLAP = 200
 
 # ─── Retrieval ───
-TOP_K = 10
+TOP_K = 5
 SIMILARITY_THRESHOLD = 0.10
 
 # ─── File Upload ───
