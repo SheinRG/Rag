@@ -59,13 +59,16 @@ def retrieve(
 
         # Rerank with Cross-Encoder if available
         if reranker and len(chunks) > 1:
-            pairs = [[query, chunk["content"]] for chunk in chunks]
+            # OPTIMIZATION: Only rerank the top 20 chunks to save CPU time
+            chunks_to_rerank = chunks[:20]
+            pairs = [[query, chunk["content"]] for chunk in chunks_to_rerank]
             scores = reranker.predict(pairs)
-            for i, chunk in enumerate(chunks):
+            for i, chunk in enumerate(chunks_to_rerank):
                 chunk["similarity"] = float(scores[i])  # Override similarity with reranker score
             
             # Sort by new score descending
-            chunks.sort(key=lambda x: x["similarity"], reverse=True)
+            chunks_to_rerank.sort(key=lambda x: x["similarity"], reverse=True)
+            chunks = chunks_to_rerank
         
         # Finally, trim to top_k
         chunks = chunks[:top_k]
