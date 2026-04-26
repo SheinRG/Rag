@@ -136,7 +136,7 @@ export default function Navbar() {
               </>
             );
 
-            const baseClass = `relative px-5 py-2 rounded-full font-semibold text-[0.95rem] transition-colors duration-300 no-underline ${
+            const baseClass = `relative px-5 py-2 rounded-full font-semibold text-[0.95rem] transition-colors duration-300 no-underline whitespace-nowrap ${
               isActive || isHovered ? 'text-black' : 'text-gray-500'
             }`;
 
@@ -220,7 +220,7 @@ export default function Navbar() {
           ) : (
             <>
               <div 
-                className="relative px-5 py-2 rounded-full font-semibold text-[0.95rem] transition-colors duration-300 no-underline cursor-pointer flex items-center justify-center"
+                className="relative px-5 py-2 rounded-full font-semibold text-[0.95rem] transition-colors duration-300 no-underline cursor-pointer flex items-center justify-center whitespace-nowrap"
                 onMouseEnter={() => setHoveredSection('login')}
                 onMouseLeave={() => setHoveredSection(null)}
               >
@@ -242,7 +242,7 @@ export default function Navbar() {
                 to="/signup" 
                 whileHover={{ scale: 1.05, y: -2 }}
                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                className="ml-2 px-6 py-[0.65rem] text-white rounded-[999px] font-bold text-[0.9rem] no-underline transition-all relative overflow-hidden group shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                className="ml-2 px-6 py-[0.65rem] text-white rounded-[999px] font-bold text-[0.9rem] no-underline transition-all relative overflow-hidden group shadow-[0_4px_12px_rgba(0,0,0,0.15)] whitespace-nowrap"
                 style={{
                   background: 'rgba(17,17,17,0.9)',
                   backdropFilter: 'blur(20px)',
