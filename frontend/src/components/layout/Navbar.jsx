@@ -87,15 +87,25 @@ export default function Navbar() {
     <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 font-sans" style={{ fontFamily: '"Inter", "system-ui", sans-serif' }}>
       <motion.div 
         initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ 
-          duration: 1.2,
-          ease: "easeOut",
-          delay: 0.2
+        animate={{ 
+          y: 0, 
+          opacity: 1,
+          maxWidth: isScrolled ? 850 : 1020,
+          paddingLeft: isScrolled ? 24 : 32,
+          paddingRight: isScrolled ? 24 : 32,
+          paddingTop: isScrolled ? 10 : 12,
+          paddingBottom: isScrolled ? 10 : 12,
+          backgroundColor: isScrolled ? "rgba(255, 255, 255, 0.7)" : "rgba(255, 255, 255, 0.3)",
+          boxShadow: isScrolled 
+            ? "0 12px 40px 0 rgba(31,38,135,0.15), inset 0 0 0 1px rgba(255,255,255,0.5)" 
+            : "0 8px 32px 0 rgba(31,38,135,0.07), inset 0 0 0 1px rgba(255,255,255,0.4)"
         }}
-        className={`rounded-[999px] flex items-center justify-between w-full max-w-[1020px] px-8 py-3 transition-all duration-500 ease-in-out border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07),inset_0_0_0_1px_rgba(255,255,255,0.4)] backdrop-blur-2xl backdrop-saturate-[180%] ${
-          isScrolled ? 'bg-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]' : 'bg-white/30'
-        }`}
+        transition={{ 
+          y: { duration: 1.2, ease: "easeOut", delay: 0.2 },
+          opacity: { duration: 1.2, ease: "easeOut", delay: 0.2 },
+          default: { type: "spring", stiffness: 220, damping: 25, mass: 0.5 }
+        }}
+        className="rounded-[999px] flex items-center justify-between w-full border border-white/40 backdrop-blur-2xl backdrop-saturate-[180%]"
       >
         {/* Logo */}
         <div className="flex-1">
