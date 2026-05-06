@@ -4,6 +4,8 @@ Endpoints for AI-powered document insights: overview, suggestions, quiz,
 summary, flashcards, and mind map.
 """
 
+# Maintenance: 2026-05-06
+
 import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
