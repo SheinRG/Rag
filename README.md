@@ -89,3 +89,5 @@ See `backend/.env.example` and `frontend/.env.example` for required configuratio
 ## 📄 License
 
 MIT
+
+<!-- Maintenance update: 2026-05-06 -->
