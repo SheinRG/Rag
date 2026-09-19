@@ -130,3 +130,95 @@ def test_delete_404s_for_a_document_owned_by_someone_else(client):
     response = client.delete("/api/documents/doc-1")
 
     assert response.status_code == 404
+
+
+def _doc_row(**overrides):
+    row = {
+        "id": "doc-1",
+        "original_name": "annual-report.pdf",
+        "file_type": "pdf",
+        "file_size": 10,
+        "num_chunks": 0,
+        "status": "failed",
+        "error_msg": "boom",
+        "notebook_id": None,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "storage_path": "user-1/doc-1.pdf",
+    }
+    row.update(overrides)
+    return row
+
+
+def test_retry_reschedules_ingestion_for_a_failed_document(client, monkeypatch):
+    chunks = FakeQuery([])
+    client.install({"documents": FakeQuery([_doc_row()]), "chunks": chunks})
+
+    calls = []
+
+    def fake_ingest(document_id, storage_path, file_type, user_id):
+        calls.append((document_id, storage_path, file_type, user_id))
+
+    monkeypatch.setattr(document_routes, "run_ingestion", fake_ingest)
+
+    response = client.post("/api/documents/doc-1/retry")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "processing"
+    assert body["error_msg"] is None
+    # Partial chunks from the earlier run are dropped before rescheduling.
+    assert any(name == "delete" for name, _ in chunks.calls)
+    assert ("eq", ("document_id", "doc-1")) in chunks.calls
+    assert ("eq", ("user_id", "user-1")) in chunks.calls
+    assert calls == [("doc-1", "user-1/doc-1.pdf", "pdf", "user-1")]
+
+
+def test_retry_409s_for_a_document_still_processing(client, monkeypatch):
+    docs = FakeQuery([_doc_row(status="processing", error_msg=None)])
+    client.install({"documents": docs, "chunks": FakeQuery([])})
+    monkeypatch.setattr(document_routes, "run_ingestion", lambda *a, **k: None)
+
+    response = client.post("/api/documents/doc-1/retry")
+
+    assert response.status_code == 409
+    assert "processing" in response.json()["detail"].lower()
+
+
+def test_retry_409s_for_a_document_already_ready(client, monkeypatch):
+    docs = FakeQuery([_doc_row(status="ready", error_msg=None)])
+    client.install({"documents": docs, "chunks": FakeQuery([])})
+    monkeypatch.setattr(document_routes, "run_ingestion", lambda *a, **k: None)
+
+    response = client.post("/api/documents/doc-1/retry")
+
+    assert response.status_code == 409
+    assert "already" in response.json()["detail"].lower()
+
+
+def test_retry_404s_for_a_document_owned_by_someone_else(client):
+    client.install({"documents": FakeQuery([]), "chunks": FakeQuery([])})
+
+    response = client.post("/api/documents/doc-1/retry")
+
+    assert response.status_code == 404
+
+
+def test_retry_schedules_youtube_ingestion_for_a_failed_youtube_doc(client, monkeypatch):
+    docs = FakeQuery([_doc_row(
+        file_type="youtube",
+        storage_path="youtube/VIDEO_ID123",
+        original_name="YouTube: VIDEO_ID123",
+    )])
+    client.install({"documents": docs, "chunks": FakeQuery([])})
+
+    calls = []
+    monkeypatch.setattr(
+        document_routes,
+        "run_youtube_ingestion",
+        lambda doc_id, video_id, user_id: calls.append((doc_id, video_id, user_id)),
+    )
+
+    response = client.post("/api/documents/doc-1/retry")
+
+    assert response.status_code == 200
+    assert calls == [("doc-1", "VIDEO_ID123", "user-1")]

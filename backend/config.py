@@ -34,9 +34,14 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 EMBED_MODEL = "embed-english-light-v3.0"
 EMBED_DIMENSIONS = 384
 
-# ─── Chunking ───
+# ─── Ingestion ───
 CHUNK_SIZE = 2500
 CHUNK_OVERLAP = 200
+# A document stuck in "processing" beyond this is presumed dead (worker crash,
+# hung background task) and the watchdog flips it to "failed" for a retry.
+INGESTION_TIMEOUT_MINUTES = int(os.getenv("INGESTION_TIMEOUT_MINUTES", "30"))
+# How often the watchdog checks for stale jobs, in seconds.
+WATCHDOG_INTERVAL_SECONDS = int(os.getenv("WATCHDOG_INTERVAL_SECONDS", "300"))
 
 # ─── Retrieval ───
 TOP_K = 5
@@ -54,3 +59,7 @@ STORAGE_BUCKET = "documents"
 # ─── App ───
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
+# ─── Observability ───
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1"))

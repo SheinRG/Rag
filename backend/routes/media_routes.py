@@ -24,6 +24,7 @@ from ingest import run_ingestion
 from retriever import retrieve
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from groq import Groq
+from utils.prompt_security import UNTRUSTED_CONTENT_RULE, wrap_document_content
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Media"])
@@ -321,7 +322,9 @@ async def verify_citations(
             messages=[
                 {
                     "role": "system",
-                    "content": """You are a citation verification engine. Your job is to cross-check an AI-generated answer against the provided source documents.
+                    "content": f"""{UNTRUSTED_CONTENT_RULE}
+
+You are a citation verification engine. Your job is to cross-check an AI-generated answer against the provided source documents.
 
 For each major claim in the answer, determine if it is:
 - ✅ VERIFIED: The claim is directly supported by the source text
@@ -343,7 +346,7 @@ The score should be 0-100 representing overall verification confidence. No markd
                 },
                 {
                     "role": "user",
-                    "content": f"ANSWER TO VERIFY:\n{body.answer}\n\nSOURCE DOCUMENTS:\n{source_text}",
+                    "content": f"ANSWER TO VERIFY:\n{body.answer}\n\nSOURCE DOCUMENTS:\n{wrap_document_content(source_text)}",
                 },
             ],
             max_tokens=2000,
@@ -429,7 +432,9 @@ async def generate_research_report(
                 messages=[
                     {
                         "role": "system",
-                        "content": """You are a Senior Research Architect. Given a specific query and document context, design a formal research dossier structure. 
+                        "content": f"""{UNTRUSTED_CONTENT_RULE}
+
+You are a Senior Research Architect. Given a specific query and document context, design a formal research dossier structure. 
                         Unlike a simple summary, this dossier must investigate the prompt deeply.
                         Return ONLY a JSON array of 4-6 specific section titles that cover: 
                         1. A Problem Statement or Context, 
@@ -440,7 +445,7 @@ async def generate_research_report(
                     },
                     {
                         "role": "user",
-                        "content": f"Research prompt: {body.prompt}\n\nDocument content preview:\n{context[:8000]}",
+                        "content": f"Research prompt: {body.prompt}\n\nDocument content preview:\n{wrap_document_content(context[:8000])}",
                     },
                 ],
                 max_tokens=500,
@@ -479,7 +484,9 @@ async def generate_research_report(
                     messages=[
                         {
                             "role": "system",
-                            "content": f"""You are a Senior Research Analyst writing the section "{section}" for a formal research dossier titled "{body.prompt}".
+                            "content": f"""{UNTRUSTED_CONTENT_RULE}
+
+You are a Senior Research Analyst writing the section "{section}" for a formal research dossier titled "{body.prompt}".
 
                             Instructions:
                             - Write 3-5 comprehensive, analytical paragraphs.
@@ -491,7 +498,7 @@ async def generate_research_report(
                         },
                         {
                             "role": "user",
-                            "content": f"Document content:\n{ctx}",
+                            "content": f"Document content:\n{wrap_document_content(ctx)}",
                         },
                     ],
                     max_tokens=1500,

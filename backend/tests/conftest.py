@@ -53,6 +53,12 @@ class FakeQuery:
     def eq(self, *a, **k):
         return self._record("eq", *a)
 
+    def lt(self, *a, **k):
+        return self._record("lt", *a)
+
+    def gt(self, *a, **k):
+        return self._record("gt", *a)
+
     def in_(self, *a, **k):
         return self._record("in_", *a)
 
