@@ -13,6 +13,7 @@ from auth_middleware import get_current_user
 from config import STORAGE_BUCKET, MAX_FILE_SIZE_BYTES
 from utils.file_handler import validate_file, get_file_type
 from ingest import run_ingestion
+from routes.media_routes import run_youtube_ingestion
 from models.schemas import DocumentResponse, DocumentStatusResponse, DocumentUploadResponse, DocumentRenameRequest
 
 logger = logging.getLogger(__name__)
@@ -233,4 +234,84 @@ async def rename_document(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to rename document.",
+        )
+
+
+@router.post("/{doc_id}/retry", response_model=DocumentResponse)
+async def retry_document(
+    doc_id: str,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_current_user),
+):
+    """
+    Re-run ingestion for a document that failed (or was flipped to failed by
+    the watchdog). Old chunks are dropped first so a retry can never duplicate
+    a partially-ingested run, then status is reset to 'processing' and the
+    ingestion pipeline is rescheduled.
+    """
+    try:
+        result = (
+            supabase.table("documents")
+            .select(
+                "id, original_name, file_type, file_size, num_chunks, status, "
+                "error_msg, notebook_id, created_at, storage_path"
+            )
+            .eq("id", doc_id)
+            .eq("user_id", str(user.id))
+            .single()
+            .execute()
+        )
+
+        if not result.data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+        record = result.data
+
+        if record["status"] == "processing":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Document is still processing. Wait for it to finish or fail before retrying.",
+            )
+        if record["status"] == "ready":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Document is already processed. No retry needed.",
+            )
+
+        # Drop any partial chunks from an earlier run so a retry is idempotent.
+        supabase.table("chunks").delete().eq("document_id", doc_id).eq(
+            "user_id", str(user.id)
+        ).execute()
+
+        supabase.table("documents").update({
+            "status": "processing",
+            "error_msg": None,
+        }).eq("id", doc_id).eq("user_id", str(user.id)).execute()
+
+        if record["file_type"] == "youtube":
+            video_id = (record["storage_path"] or f"youtube/{doc_id}").rsplit("/", 1)[-1]
+            background_tasks.add_task(
+                run_youtube_ingestion, doc_id, video_id, str(user.id)
+            )
+        else:
+            background_tasks.add_task(
+                run_ingestion,
+                document_id=doc_id,
+                storage_path=record["storage_path"],
+                file_type=record["file_type"],
+                user_id=str(user.id),
+            )
+
+        record.update({"status": "processing", "error_msg": None})
+        logger.info(f"Document {doc_id} retry scheduled.")
+
+        return DocumentResponse(**record)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to schedule retry for document {doc_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to schedule retry.",
         )

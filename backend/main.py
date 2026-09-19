@@ -3,6 +3,7 @@ Nexus — FastAPI Application
 Main app assembly with middleware, routers, and startup checks.
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -13,7 +14,13 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from config import ALLOWED_ORIGINS
+from config import (
+    ALLOWED_ORIGINS,
+    ENVIRONMENT,
+    SENTRY_DSN,
+    SENTRY_TRACES_SAMPLE_RATE,
+)
+from observability import ObservabilityMiddleware, metrics_response, setup_logging
 from rate_limit import limiter
 from routes.auth_routes import router as auth_router
 from routes.document_routes import router as document_router
@@ -24,22 +31,37 @@ from routes.notebook_routes import router as notebook_router
 from routes.media_routes import router as media_router
 
 # ─── Logging ───
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-)
+# One JSON object per line, tagged with request_id while a request is in
+# flight, so logs at any volume are machine-parseable and filterable.
+setup_logging()
 # Silence noisy HTTP debug logs (saves RAM + makes real errors visible)
 for noisy in ("httpx", "httpcore", "hpack", "hpack.hpack", "hpack.table"):
     logging.getLogger(noisy).setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+# ─── Error tracking (optional) ───
+# Only active when SENTRY_DSN is set; otherwise the app runs without it.
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=ENVIRONMENT,
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+    )
+    logger.info("Sentry error tracking enabled.")
 
 
 # ─── Lifespan (startup / shutdown) ───
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Verify external connections on startup."""
+    """Verify external connections on startup and run the ingestion watchdog."""
     logger.info("Nexus starting up...")
+
+    # Start the stale-'processing' watchdog (safety net for lost background jobs).
+    from maintenance import run_watchdog
+    watchdog_task = asyncio.create_task(run_watchdog())
 
     # Verify Supabase connection
     try:
@@ -66,6 +88,11 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    watchdog_task.cancel()
+    try:
+        await watchdog_task
+    except asyncio.CancelledError:
+        pass
     logger.info("Nexus shutting down.")
 
 
@@ -98,6 +125,10 @@ app.add_middleware(
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+# Outermost: stamps every response with X-Request-ID and meters the call.
+# Added last so it wraps the rate limiter and CORS layers too.
+app.add_middleware(ObservabilityMiddleware)
+
 # ─── Routers ───
 
 app.include_router(auth_router, prefix="/api/auth")
@@ -115,3 +146,11 @@ app.include_router(media_router, prefix="/api/media")
 async def health():
     """Health check endpoint."""
     return {"status": "ok", "version": "1.0.0", "service": "Nexus"}
+
+
+# ─── Metrics (Prometheus) ───
+
+@app.get("/metrics", include_in_schema=False, tags=["System"])
+async def metrics():
+    """Prometheus metrics in the text exposition format (scrape target)."""
+    return metrics_response()

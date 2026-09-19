@@ -11,6 +11,8 @@ pyjwt
 slowapi
 httpx
 numpy
+prometheus-client
+sentry-sdk
 youtube-transcript-api
 Pillow
 google-api-python-client==2.194.0

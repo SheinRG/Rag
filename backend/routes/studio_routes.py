@@ -18,6 +18,7 @@ from auth_middleware import get_current_user
 from database import supabase
 from config import GROQ_API_KEY, GROQ_MODEL, GROQ_REASONING_EFFORT
 from groq import Groq, RateLimitError
+from utils.prompt_security import UNTRUSTED_CONTENT_RULE, wrap_document_content
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Studio"])
@@ -87,8 +88,10 @@ def _build_context(chunks: list[dict], max_chars: int = 12000) -> str:
         return "No content available."
     text = "\n\n".join(c["content"] for c in chunks)
     if len(text) > max_chars:
-        return text[:max_chars] + "\n\n...[Content Truncated to stay within AI limits]..."
-    return text
+        text = text[:max_chars] + "\n\n...[Content Truncated to stay within AI limits]..."
+    # Studio prompts embed this text directly; seal it so any instructions the
+    # document contains are treated as data, not commands.
+    return wrap_document_content(text)
 
 
 def _generate(system: str, user_msg: str, max_tokens: int = 1500, json_mode: bool = False) -> str:
@@ -97,7 +100,7 @@ def _generate(system: str, user_msg: str, max_tokens: int = 1500, json_mode: boo
         "model": GROQ_MODEL,
         "reasoning_effort": GROQ_REASONING_EFFORT,
         "messages": [
-            {"role": "system", "content": system},
+            {"role": "system", "content": f"{UNTRUSTED_CONTENT_RULE}\n\n{system}"},
             {"role": "user", "content": user_msg},
         ],
         "max_tokens": max_tokens,

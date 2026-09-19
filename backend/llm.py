@@ -11,6 +11,7 @@ from fastapi.concurrency import run_in_threadpool
 from groq import AsyncGroq, RateLimitError
 from config import GROQ_API_KEY, GROQ_MODEL, GROQ_REASONING_EFFORT
 from retriever import retrieve
+from utils.prompt_security import UNTRUSTED_CONTENT_RULE, wrap_document_content
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,12 @@ def build_system_prompt(chunks: List[dict]) -> str:
     """
     context_parts = []
     for chunk in chunks:
-        context_parts.append(f"[SOURCE: {chunk['source']}]\n{chunk['content']}")
+        # Each chunk is sealed as untrusted data: the source name comes from a
+        # document filename the user chose, but the content itself can contain
+        # prompt-injection text and must never reach the model as instructions.
+        context_parts.append(
+            f"[SOURCE: {chunk['source']}]\n{wrap_document_content(chunk['content'])}"
+        )
 
     context = (
         "\n\n".join(context_parts)
@@ -36,6 +42,8 @@ def build_system_prompt(chunks: List[dict]) -> str:
     )
 
     prompt = f"""You are Nexus, a highly intelligent and collaborative research assistant (similar to NotebookLM). Your goal is to help the user understand, synthesize, and explore their uploaded documents.
+
+{UNTRUSTED_CONTENT_RULE}
 
 Guidelines for your response:
 1. Speak naturally and conversationally as a helpful research partner. Do not sound like a rigid robot.
