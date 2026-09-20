@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from auth_middleware import get_current_user
 from llm import ask_stream
+from usage import track_ai_usage
 from pydantic import BaseModel
 
 
@@ -31,6 +32,7 @@ router = APIRouter(tags=["Query"])
 async def ask_stream_endpoint(
     body: AskRequestWithDoc,
     user=Depends(get_current_user),
+    _ai=Depends(track_ai_usage),
 ):
     """Stream an AI-generated answer via SSE."""
     if not body.question.strip():

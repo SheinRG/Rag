@@ -13,6 +13,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import routes.document_routes as document_routes
+import usage as usage_module
+import studio_cache as studio_cache_module
 from auth_middleware import get_current_user
 from config import MAX_FILE_SIZE_BYTES
 from conftest import FakeQuery, FakeSupabase
@@ -47,6 +49,11 @@ def client(monkeypatch):
         supabase = FakeSupabase(tables=tables)
         supabase.storage = storage
         monkeypatch.setattr(document_routes, "supabase", supabase)
+        # The upload path enforces per-user quotas against the usage module's
+        # client — point it at the same fake so it reads test data, not network.
+        usage_module.supabase = supabase
+        # Studio-cache purges (delete/retry) also go through their own module.
+        studio_cache_module.supabase = supabase
         return supabase
 
     with TestClient(app) as c:
@@ -62,6 +69,57 @@ def test_upload_rejects_unsupported_extension_without_reading_the_body(client):
     )
     assert response.status_code == 400
     assert "not supported" in response.json()["detail"]
+
+
+def test_upload_403s_when_user_is_at_the_document_cap(client, monkeypatch):
+    monkeypatch.setattr(usage_module, "MAX_DOCUMENTS", 1)
+    client.install({"documents": FakeQuery([{"id": "a"}], count=1)})
+
+    response = client.post(
+        "/api/documents/upload", files={"file": ("notes.txt", b"hello", "text/plain")}
+    )
+
+    assert response.status_code == 403
+    # Quota is enforced before anything is written to storage.
+    assert client.storage.uploaded == []
+
+
+def test_upload_403s_when_storage_quota_would_be_exceeded(client, monkeypatch):
+    monkeypatch.setattr(usage_module, "MAX_STORAGE_BYTES", 4)
+    client.install({"documents": FakeQuery([])})
+
+    response = client.post(
+        "/api/documents/upload", files={"file": ("notes.txt", b"hello", "text/plain")}
+    )
+
+    assert response.status_code == 403
+    assert client.storage.uploaded == []
+
+
+def test_list_documents_applies_offset_and_limit(client):
+    docs = FakeQuery([{
+        "id": "doc-1",
+        "original_name": "a.txt",
+        "file_type": "txt",
+        "file_size": 1,
+        "num_chunks": 0,
+        "status": "ready",
+        "error_msg": None,
+        "notebook_id": None,
+        "created_at": "2026-01-01T00:00:00+00:00",
+    }])
+    client.install({"documents": docs})
+
+    response = client.get("/api/documents?limit=10&offset=5")
+
+    assert response.status_code == 200
+    assert ("range", (5, 14)) in docs.calls
+
+
+def test_list_documents_rejects_a_limit_above_the_max(client):
+    client.install({})
+    response = client.get("/api/documents?limit=9999")
+    assert response.status_code == 422
 
 
 def test_upload_rejects_a_file_over_the_size_limit(client):
@@ -124,6 +182,19 @@ def test_delete_removes_the_stored_file(client):
     assert client.storage.removed == ["user-1/doc-1.pdf"]
 
 
+def test_delete_purges_cached_studio_output(client):
+    docs = FakeQuery([{"id": "doc-1", "storage_path": "user-1/doc-1.pdf", "user_id": "user-1"}])
+    cache = FakeQuery([])
+    client.install({"documents": docs, "chunks": FakeQuery([]), "studio_cache": cache})
+
+    response = client.delete("/api/documents/doc-1")
+
+    assert response.status_code == 204
+    assert any(name == "delete" for name, _ in cache.calls)
+    assert ("eq", ("document_id", "doc-1")) in cache.calls
+    assert ("eq", ("user_id", "user-1")) in cache.calls
+
+
 def test_delete_404s_for_a_document_owned_by_someone_else(client):
     client.install({"documents": FakeQuery([]), "chunks": FakeQuery([])})
 
@@ -171,6 +242,20 @@ def test_retry_reschedules_ingestion_for_a_failed_document(client, monkeypatch):
     assert ("eq", ("document_id", "doc-1")) in chunks.calls
     assert ("eq", ("user_id", "user-1")) in chunks.calls
     assert calls == [("doc-1", "user-1/doc-1.pdf", "pdf", "user-1")]
+
+
+def test_retry_purges_cached_studio_output(client, monkeypatch):
+    cache = FakeQuery([])
+    client.install(
+        {"documents": FakeQuery([_doc_row()]), "chunks": FakeQuery([]), "studio_cache": cache}
+    )
+    monkeypatch.setattr(document_routes, "run_ingestion", lambda *a, **k: None)
+
+    response = client.post("/api/documents/doc-1/retry")
+
+    assert response.status_code == 200
+    assert any(name == "delete" for name, _ in cache.calls)
+    assert ("eq", ("document_id", "doc-1")) in cache.calls
 
 
 def test_retry_409s_for_a_document_still_processing(client, monkeypatch):

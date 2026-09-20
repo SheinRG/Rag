@@ -68,6 +68,12 @@ class FakeQuery:
     def limit(self, *a, **k):
         return self._record("limit", *a)
 
+    def range(self, *a, **k):
+        return self._record("range", *a)
+
+    def upsert(self, *a, **k):
+        return self._record("upsert", *a)
+
     def single(self, *a, **k):
         # PostgREST's .single() returns one object, not a list.
         self._single = True
@@ -77,6 +83,9 @@ class FakeQuery:
         data = self._rows
         if self._single:
             data = self._rows[0] if self._rows else None
+            # A single() only affects this one execute: the same builder object is
+            # sometimes reused for a second query (e.g. an update returning rows).
+            self._single = False
         return type("Result", (), {"data": data, "count": self._count})()
 
 
