@@ -9,7 +9,7 @@ An AI-powered research assistant that lets you upload documents (PDF, DOCX, PPTX
 - **Multi-Source Chat** — Select multiple documents and ask questions across all of them simultaneously
 - **Smart Retrieval** — pgvector cosine similarity search with cross-encoder reranking
 - **Studio Tools** — Quick Summaries, Flashcards, Mind Maps, Quizzes, and Research Dossiers
-- **Notebook Organization** — Group documents into notebooks for focused research
+- **Notebook Organization** Group documents into notebooks for focused research
 - **Web Search** — Integrated Tavily-powered web search alongside your documents
 - **Key Topics** — Auto-extracted study guide with progress tracking
 - **Notes** — Create and manage personal notes per notebook
