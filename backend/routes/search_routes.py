@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from auth_middleware import get_current_user
 from config import GROQ_API_KEY, GROQ_MODEL, GROQ_REASONING_EFFORT, TAVILY_API_KEY
 from groq import AsyncGroq
+from usage import track_ai_usage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Search"])
@@ -31,7 +32,7 @@ class WebSearchRequest(BaseModel):
     document_id: Optional[str] = None
 
 @router.post("/search/web")
-async def web_search(body: WebSearchRequest, user=Depends(get_current_user)):
+async def web_search(body: WebSearchRequest, user=Depends(get_current_user), _ai=Depends(track_ai_usage)):
     """Search the web contextually and stream a hybrid AI answer."""
     if not body.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")

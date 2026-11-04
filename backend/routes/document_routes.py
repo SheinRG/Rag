@@ -6,7 +6,7 @@ Upload, list, status, and delete documents.
 import uuid
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, status, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, status, Form, Query
 
 from database import supabase
 from auth_middleware import get_current_user
@@ -15,6 +15,8 @@ from utils.file_handler import validate_file, get_file_type
 from ingest import run_ingestion
 from routes.media_routes import run_youtube_ingestion
 from models.schemas import DocumentResponse, DocumentStatusResponse, DocumentUploadResponse, DocumentRenameRequest
+from usage import check_upload_quota
+from studio_cache import purge as purge_studio_cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Documents"])
@@ -50,6 +52,10 @@ async def upload_document(
         file_type = get_file_type(file.filename)
         safe_filename = f"{uuid.uuid4()}.{file_type}"
         storage_path = f"{user.id}/{safe_filename}"
+
+        # Enforce per-user caps BEFORE bytes are written to storage, so a user
+        # at the document/storage limit can never grow past it.
+        check_upload_quota(str(user.id), file_size)
 
         supabase.storage.from_(STORAGE_BUCKET).upload(
             path=storage_path,
@@ -99,8 +105,14 @@ async def upload_document(
 
 
 @router.get("", response_model=list[DocumentResponse])
-async def list_documents(notebook_id: Optional[str] = None, user=Depends(get_current_user)):
-    """List all documents for the current user, optionally filtered by notebook."""
+async def list_documents(
+    notebook_id: Optional[str] = None,
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    user=Depends(get_current_user),
+):
+    """List documents for the current user, optionally filtered by notebook, with
+    offset/limit pagination so large accounts don't pull every row at once."""
     try:
         query = (
             supabase.table("documents")
@@ -111,7 +123,7 @@ async def list_documents(notebook_id: Optional[str] = None, user=Depends(get_cur
         if notebook_id:
             query = query.eq("notebook_id", notebook_id)
 
-        result = query.order("created_at", desc=True).execute()
+        result = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
 
         logger.info(f"List documents: notebook_id={notebook_id}, returned={len(result.data)} docs")
 
@@ -188,6 +200,9 @@ async def delete_document(doc_id: str, user=Depends(get_current_user)):
         supabase.table("chunks").delete().eq("document_id", doc_id).eq(
             "user_id", str(user.id)
         ).execute()
+
+        # Drop cached studio output too (also cascades when the FK exists).
+        purge_studio_cache(str(user.id), doc_id)
 
         supabase.table("documents").delete().eq("id", doc_id).eq(
             "user_id", str(user.id)
@@ -282,6 +297,10 @@ async def retry_document(
         supabase.table("chunks").delete().eq("document_id", doc_id).eq(
             "user_id", str(user.id)
         ).execute()
+
+        # A re-ingested document invalidates cached studio output: the old
+        # payloads describe content that is about to be replaced.
+        purge_studio_cache(str(user.id), doc_id)
 
         supabase.table("documents").update({
             "status": "processing",

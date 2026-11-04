@@ -13,6 +13,7 @@ from database import supabase
 from auth_middleware import get_current_user
 from config import GROQ_API_KEY, GROQ_MODEL, GROQ_REASONING_EFFORT
 from groq import Groq
+from usage import track_ai_usage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Notebooks"])
@@ -193,7 +194,7 @@ async def delete_notebook(notebook_id: str, user=Depends(get_current_user)):
 
 
 @router.post("/{notebook_id}/synthesize")
-async def synthesize_notebook(notebook_id: str, user=Depends(get_current_user)):
+async def synthesize_notebook(notebook_id: str, user=Depends(get_current_user), _ai=Depends(track_ai_usage)):
     """Generate a comprehensive synthesis report of all documents in the notebook."""
     try:
         # 1. Verify notebook exists and belongs to user

@@ -18,6 +18,8 @@ from auth_middleware import get_current_user
 from database import supabase
 from config import GROQ_API_KEY, GROQ_MODEL, GROQ_REASONING_EFFORT
 from groq import Groq, RateLimitError
+from usage import check_ai_quota, count_ai_call
+from studio_cache import get_cached, store
 from utils.prompt_security import UNTRUSTED_CONTENT_RULE, wrap_document_content
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,12 @@ client = Groq(api_key=GROQ_API_KEY)
 
 class StudioRequest(BaseModel):
     document_id: Optional[str] = None
+
+
+async def _charge_ai(user_id: str) -> None:
+    """Charge one AI call — used only on the generate path, never on a cache hit."""
+    await run_in_threadpool(check_ai_quota, user_id)
+    await run_in_threadpool(count_ai_call, user_id)
 
 
 def _get_doc_chunks(document_id: str, user_id: str, limit: int = 15) -> list[dict]:
@@ -77,6 +85,7 @@ def _get_all_chunks(user_id: str, limit: int = 20) -> list[dict]:
         supabase.table("chunks")
         .select("content")
         .eq("user_id", user_id)
+        .order("chunk_index")
         .limit(limit)
         .execute()
     )
@@ -153,6 +162,11 @@ async def extract_key_topics(doc_id: str, user=Depends(get_current_user)):
         if not doc.data:
             raise HTTPException(status_code=404, detail="Document not found")
 
+        user_id = str(user.id)
+        cached = get_cached(user_id, doc_id, "topics")
+        if cached is not None:
+            return cached
+
         chunks = _get_doc_chunks(doc_id, str(user.id), limit=20)
         if not chunks:
             raise HTTPException(status_code=400, detail="No content found for this document")
@@ -168,10 +182,13 @@ Extract between 5 and 10 topics. Order them logically (as they appear in the doc
 
         user_msg = f"Document: {doc.data['original_name']}\n\nContent:\n{context}"
 
+        await _charge_ai(user_id)
         raw = await _agenerate(system, user_msg, max_tokens=800, json_mode=True)
         parsed = _parse_json(raw)
         topics = parsed.get("topics", parsed) if isinstance(parsed, dict) else parsed
-        return {"topics": topics, "document_name": doc.data["original_name"]}
+        payload = {"topics": topics, "document_name": doc.data["original_name"]}
+        store(user_id, doc_id, "topics", payload)
+        return payload
 
     except json.JSONDecodeError:
         logger.error(f"Failed to parse topics JSON: {raw[:200]}")
@@ -205,12 +222,18 @@ async def document_overview(doc_id: str, user=Depends(get_current_user)):
         if not doc.data:
             raise HTTPException(status_code=404, detail="Document not found.")
 
+        user_id = str(user.id)
+        cached = get_cached(user_id, doc_id, "overview")
+        if cached is not None:
+            return cached
+
         chunks = _get_doc_chunks(doc_id, str(user.id), limit=10)
         if not chunks:
             return {"summary": "Document is still being processed.", "suggestions": []}
 
         context = _build_context(chunks)
 
+        await _charge_ai(user_id)
         result = await _agenerate(
             system="""You are Nexus. Given document chunks, produce a JSON object with:
 1. "summary": A 2-3 sentence overview of what the document is about.
@@ -226,6 +249,7 @@ Return ONLY valid JSON.""",
         except json.JSONDecodeError:
             parsed = {"summary": "Could not generate overview.", "suggestions": []}
 
+        store(user_id, doc_id, "overview", parsed)
         return parsed
 
     except HTTPException:
@@ -245,7 +269,11 @@ Return ONLY valid JSON.""",
 async def generate_quiz(body: StudioRequest, user=Depends(get_current_user)):
     """Generate a quiz from document content."""
     try:
+        user_id = str(user.id)
         if body.document_id:
+            cached = get_cached(user_id, body.document_id, "quiz")
+            if cached is not None:
+                return cached
             chunks = _get_doc_chunks(body.document_id, str(user.id))
         else:
             chunks = _get_all_chunks(str(user.id))
@@ -254,6 +282,7 @@ async def generate_quiz(body: StudioRequest, user=Depends(get_current_user)):
             raise HTTPException(status_code=400, detail="No content available.")
 
         context = _build_context(chunks)
+        await _charge_ai(user_id)
         result = await _agenerate(
             system="""Generate a quiz with exactly 5 multiple-choice questions based on the provided content.
 Return ONLY valid JSON in this format:
@@ -268,6 +297,7 @@ Return ONLY valid JSON in this format:
         except json.JSONDecodeError:
             parsed = {"questions": []}
 
+        store(user_id, body.document_id, "quiz", parsed)
         return parsed
 
     except HTTPException:
@@ -287,7 +317,11 @@ Return ONLY valid JSON in this format:
 async def generate_summary(body: StudioRequest, user=Depends(get_current_user)):
     """Generate a comprehensive summary."""
     try:
+        user_id = str(user.id)
         if body.document_id:
+            cached = get_cached(user_id, body.document_id, "summary")
+            if cached is not None:
+                return cached
             chunks = _get_doc_chunks(body.document_id, str(user.id), limit=20)
         else:
             chunks = _get_all_chunks(str(user.id))
@@ -296,6 +330,7 @@ async def generate_summary(body: StudioRequest, user=Depends(get_current_user)):
             raise HTTPException(status_code=400, detail="No content available.")
 
         context = _build_context(chunks)
+        await _charge_ai(user_id)
         result = await _agenerate(
             system="""You are Nexus. Generate a comprehensive, well-structured executive summary of the provided content.
 Use Markdown formatting with headers, bullet points, and bold text.
@@ -304,7 +339,9 @@ Include: Key Themes, Main Points, Important Details, and Conclusions.""",
             max_tokens=2000,
         )
 
-        return {"summary": result}
+        payload = {"summary": result}
+        store(user_id, body.document_id, "summary", payload)
+        return payload
 
     except HTTPException:
         raise
@@ -323,7 +360,11 @@ Include: Key Themes, Main Points, Important Details, and Conclusions.""",
 async def generate_flashcards(body: StudioRequest, user=Depends(get_current_user)):
     """Generate study flashcards."""
     try:
+        user_id = str(user.id)
         if body.document_id:
+            cached = get_cached(user_id, body.document_id, "flashcards")
+            if cached is not None:
+                return cached
             chunks = _get_doc_chunks(body.document_id, str(user.id))
         else:
             chunks = _get_all_chunks(str(user.id))
@@ -332,6 +373,7 @@ async def generate_flashcards(body: StudioRequest, user=Depends(get_current_user
             raise HTTPException(status_code=400, detail="No content available.")
 
         context = _build_context(chunks)
+        await _charge_ai(user_id)
         result = await _agenerate(
             system="""Generate exactly 8 study flashcards from the provided content.
 Return ONLY valid JSON in this format:
@@ -346,6 +388,7 @@ Return ONLY valid JSON in this format:
         except json.JSONDecodeError:
             parsed = {"cards": []}
 
+        store(user_id, body.document_id, "flashcards", parsed)
         return parsed
 
     except HTTPException:
@@ -365,7 +408,11 @@ Return ONLY valid JSON in this format:
 async def generate_mindmap(body: StudioRequest, user=Depends(get_current_user)):
     """Generate a Mermaid.js mind map."""
     try:
+        user_id = str(user.id)
         if body.document_id:
+            cached = get_cached(user_id, body.document_id, "mindmap")
+            if cached is not None:
+                return cached
             chunks = _get_doc_chunks(body.document_id, str(user.id))
         else:
             chunks = _get_all_chunks(str(user.id))
@@ -374,6 +421,7 @@ async def generate_mindmap(body: StudioRequest, user=Depends(get_current_user)):
             raise HTTPException(status_code=400, detail="No content available.")
 
         context = _build_context(chunks)
+        await _charge_ai(user_id)
         result = await _agenerate(
             system="""Analyze the content and create a Mermaid.js mindmap diagram.
 Return ONLY the mermaid code, starting with 'mindmap' on the first line.
@@ -398,7 +446,9 @@ No markdown fences. No explanation.""",
         if clean.endswith("```"):
             clean = clean.rsplit("```", 1)[0]
 
-        return {"mermaid": clean.strip()}
+        payload = {"mermaid": clean.strip()}
+        store(user_id, body.document_id, "mindmap", payload)
+        return payload
 
     except HTTPException:
         raise

@@ -60,6 +60,15 @@ STORAGE_BUCKET = "documents"
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
+# ─── Per-User Quotas ───
+# Keep a single user from exhausting storage or the AI budget. Documents are
+# counted from the documents table (all statuses); storage from file_size.
+MAX_DOCUMENTS = int(os.getenv("MAX_DOCUMENTS", "100"))
+MAX_STORAGE_MB = int(os.getenv("MAX_STORAGE_MB", "500"))
+MAX_STORAGE_BYTES = MAX_STORAGE_MB * 1024 * 1024
+# User-facing AI actions per rolling day (chat asks, studio generations, etc.)
+MAX_AI_CALLS_PER_DAY = int(os.getenv("MAX_AI_CALLS_PER_DAY", "200"))
+
 # ─── Observability ───
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1"))

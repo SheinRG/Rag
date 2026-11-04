@@ -19,9 +19,10 @@ from pydantic import BaseModel
 from auth_middleware import get_current_user
 from rate_limit import limiter
 from database import supabase, embedder
-from config import GROQ_API_KEY, GROQ_MODEL, GROQ_REASONING_EFFORT, GROQ_VISION_MODEL, CHUNK_SIZE, CHUNK_OVERLAP
+from config import GROQ_API_KEY, GROQ_MODEL, GROQ_REASONING_EFFORT, GROQ_VISION_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB
 from ingest import run_ingestion
 from retriever import retrieve
+from usage import check_upload_quota, track_ai_usage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from groq import Groq
 from utils.prompt_security import UNTRUSTED_CONTENT_RULE, wrap_document_content
@@ -211,6 +212,8 @@ async def ingest_youtube(
     if body.notebook_id:
         doc_data["notebook_id"] = body.notebook_id
 
+    check_upload_quota(str(user.id), 0)
+
     result = supabase.table("documents").insert(doc_data).execute()
     doc_id = result.data[0]["id"]
 
@@ -239,6 +242,7 @@ async def analyze_image(
     prompt: Optional[str] = Form("Describe this image in detail. If it contains text, transcribe it. If it's a diagram, explain the relationships."),
     notebook_id: Optional[str] = Form(None),
     user=Depends(get_current_user),
+    _ai=Depends(track_ai_usage),
 ):
     """Analyze an uploaded image using Groq Vision API."""
     # Validate file type
@@ -255,9 +259,11 @@ async def analyze_image(
             detail="Image analysis is unavailable: no vision model is configured.",
         )
 
-    content = await file.read()
-    if len(content) > 20 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Image exceeds 20MB limit.")
+    # Bounded read: reading limit+1 bytes detects overruns without ever holding
+    # more than the limit in memory.
+    content = await file.read(MAX_FILE_SIZE_BYTES + 1)
+    if len(content) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail=f"Image exceeds {MAX_FILE_SIZE_MB}MB limit.")
 
     # Encode to base64
     b64 = base64.b64encode(content).decode("utf-8")
@@ -307,6 +313,7 @@ class VerifyRequest(BaseModel):
 async def verify_citations(
     body: VerifyRequest,
     user=Depends(get_current_user),
+    _ai=Depends(track_ai_usage),
 ):
     """Cross-check an AI answer against source documents for hallucination detection."""
     try:
@@ -386,6 +393,7 @@ async def generate_research_report(
     request: Request,
     body: ResearchRequest,
     user=Depends(get_current_user),
+    _ai=Depends(track_ai_usage),
 ):
     """Generate an autonomous, multi-section research report from documents."""
     from fastapi.responses import StreamingResponse
@@ -582,6 +590,9 @@ async def ingest_drive(
     file_size = len(content)
     clean_filename = body.file_name.rsplit(".", 1)[0] + target_ext
     storage_path = f"{user.id}/{uuid.uuid4()}_{clean_filename}"
+
+    # Enforce the storage/document cap before bytes land in Supabase Storage.
+    check_upload_quota(str(user.id), file_size)
 
     try:
         mime = mimetypes.guess_type(clean_filename)[0] or "application/octet-stream"
